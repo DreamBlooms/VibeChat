@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VibeChat</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            overflow: hidden;
+            margin: 0;
+            padding: 0;
+        }
+        
+        .vibe-font {
+            font-family: 'Doto', sans-serif;
+            font-weight: 600;
+        }
+        
+        .container-fluid {
+            height: 100vh;
+            padding: 0;
+        }
+        
+        .sidebar {
+            background-color: #343a40;
+            color: white;
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        .editor-container {
+            position: relative;
+            height: 100vh;
+            overflow: hidden;
+            background-color: #e9ecef;
+            display: flex;
+            flex-direction: column;
+            padding: 0 !important;
+        }
+        
+        .story-canvas-container {
+            position: relative;
+            width: 100%;
+            flex: 1;
+            overflow: auto;
+        }
+        
+        .story-canvas {
+            position: relative;
+            width: 5000px;
+            height: 5000px;
+            background-color: #e9ecef;
+            background-image: 
+                linear-gradient(#dee2e6 1px, transparent 1px),
+                linear-gradient(90deg, #dee2e6 1px, transparent 1px);
+            background-size: 20px 20px;
+            transform-origin: 0 0;
+            transition: transform 0.1s ease;
+        }
+        
+        .node {
+            position: absolute;
+            width: 450px;
+            background-color: white;
+            border-radius: 8px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            padding: 15px;
+            cursor: move;
+            transition: all 0.2s;
+            z-index: 10;
+        }
+        
+        .node.selected {
+            box-shadow: 0 0 0 3px #007bff, 0 5px 15px rgba(0,0,0,0.2);
+            z-index: 20;
+        }
+        
+        .node.muted {
+            opacity: 0.4;
+            background-color: #f8f9fa;
+        }
+        
+        .node.system {
+            border-left: 5px solid #28a745;
+            height: 150px;
+        }
+        
+        .node.user {
+            border-left: 5px solid #007bff;
+            height: 150px;
+        }
+        
+        .node.assistant {
+            border-left: 5px solid #6f42c1;
+            height: 250px;
+        }
+        
+        .node-content {
+            font-size: 14px;
+            margin-bottom: 0;
+            border: 1px dashed #dee2e6;
+            padding: 8px;
+            border-radius: 4px;
+            word-break: break-word;
+            overflow-y: auto;
+            height: calc(100% - 25px);
+        }
+        
+        .connections {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 5;
+        }
+        
+        .tree-view {
+            list-style-type: none;
+            padding-left: 0;
+            min-width: 200px;
+            overflow-x: auto;
+        }
+        
+        .tree-view ul {
+            list-style-type: none;
+            padding-left: 20px;
+        }
+        
+        .tree-node {
+            padding: 5px 10px;
+            cursor: pointer;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            min-width: 200px;
+        }
+        
+        .tree-node:hover {
+            background-color: #495057;
+        }
+        
+        .tree-node.selected {
+            background-color: #007bff;
+        }
+        
+        .zoom-controls {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            z-index: 100;
+        }
+        
+        .toolbar {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+        
+        .chat-input-container {
+            background-color: white;
+            padding: 25px;
+            border-top: 1px solid #dee2e6;
+            z-index: 100;
+            flex-shrink: 0;
+        }
+        
+        .api-settings {
+            background-color: #495057;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+        
+        .role-indicator {
+            font-size: 10px;
+            font-weight: bold;
+            padding: 2px 6px;
+            border-radius: 10px;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+        
+        .role-system {
+            background-color: #28a745;
+            color: white;
+        }
+        
+        .role-user {
+            background-color: #007bff;
+            color: white;
+        }
+        
+        .role-assistant {
+            background-color: #6f42c1;
+            color: white;
+        }
+        
+        .typing-indicator {
+            display: inline-block;
+            width: 10px;
+            height: 10px;
+            background-color: #6c757d;
+            border-radius: 50%;
+            margin-right: 5px;
+            animation: typing 1s infinite;
+        }
+        
+        @keyframes typing {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        .btn-group-sm {
+            display: flex;
+        }
+        
+        .btn-group-sm .btn {
+            flex: 1;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row">
+            <!-- 侧边栏 -->
+            <div class="col-md-3 sidebar">
+                <div class="p-3">
+                    <h3 class="mb-3 vibe-font">VibeChat<sup>(a)</sup></h3>
+                    <div class="d-flex mb-3">
+                        <button class="btn btn-outline-light btn-sm m-1 flex-fill" id="exportBtn">导出</button>
+                        <button class="btn btn-outline-light btn-sm m-1 flex-fill" id="importBtn">导入</button>
+                    </div>
+                    <input type="file" id="importFile" style="display: none;" accept=".json">
+                    
+                    <div class="api-settings">
+                        <div class="accordion" id="apiSettingsAccordion">
+                            <div class="accordion-item border-0">
+                                <h2 class="accordion-header" id="apiSettingsHeading">
+                                    <button class="accordion-button bg-transparent" type="button" data-bs-toggle="collapse" data-bs-target="#apiSettingsCollapse" aria-expanded="true" aria-controls="apiSettingsCollapse">
+                                        <h6 class="mb-0">API设置</h6>
+                                    </button>
+                                </h2>
+                                <div id="apiSettingsCollapse" class="accordion-collapse collapse show" aria-labelledby="apiSettingsHeading" data-bs-parent="#apiSettingsAccordion">
+                                    <div class="accordion-body p-3">
+                                        <div class="form-group">
+                                            <label for="apiUrl" class="form-label">API地址</label>
+                                            <input type="text" class="form-control form-control-sm" id="apiUrl" value="https://api.deepseek.com/chat/completions">
+                                        </div>
+                                        <div class="form-group mt-2">
+                                            <label for="apiKey" class="form-label">API密钥</label>
+                                            <input type="password" class="form-control form-control-sm" id="apiKey" placeholder="输入API密钥">
+                                        </div>
+                                        <div class="form-group mt-2">
+                                            <label for="modelName" class="form-label">模型名称</label>
+                                            <input type="text" class="form-control form-control-sm" id="modelName" value="deepseek-chat" placeholder="输入模型名称">
+                                        </div>
+                                        <button class="btn btn-outline-dark btn-sm w-100 mt-3" id="testApiBtn">测试连接</button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <hr class="bg-light">
+                    <div id="treeViewContainer">
+                        <ul class="tree-view" id="treeView"></ul>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 编辑器区域 -->
+            <div class="col-md-9 editor-container">
+                <div class="toolbar">
+                    <div class="btn-group">
+                        <button class="btn btn-danger btn-sm" id="deleteNodeBtn">删除节点</button>
+                    </div>
+                </div>
+                
+                <div class="story-canvas-container" id="canvasContainer">
+                    <div class="story-canvas" id="storyCanvas">
+                        <svg class="connections" id="connections"></svg>
+                    </div>
+                </div>
+                
+                <div class="zoom-controls">
+                    <div class="btn-group-vertical">
+                        <button class="btn btn-light btn-sm" id="zoomInBtn">+</button>
+                        <button class="btn btn-light btn-sm" id="zoomOutBtn">-</button>
+                        <button class="btn btn-light btn-sm" id="resetZoomBtn">重置</button>
+                    </div>
+                </div>
+                
+                <div class="chat-input-container">
+                    <div class="input-group">
+                        <input type="text" class="form-control" id="userInput" placeholder="输入您的问题..." autocomplete="off">
+                        <button class="btn btn-primary" id="sendBtn">发送</button>
+                    </div>
+                    <small class="form-text text-muted mt-2">
+                        节点数量: <span id="contextInfo">1</span>
+                    </small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // 应用状态
+        const state = {
+            conversation: {
+                title: "VibeChat",
+                nodes: {},
+                startNode: null
+            },
+            selectedNodeId: null,
+            zoomLevel: 1,
+            isDragging: false,
+            dragStart: { x: 0, y: 0 }
+        };
+        
+        // 常量配置
+        const CONSTANTS = {
+            HORIZONTAL_SPACING: 300,
+            VERTICAL_SPACING: 250,
+            NODE_WIDTH: 450,
+            NODE_HEIGHT: {
+                user: 150,
+                assistant: 250,
+                system: 150
+            }
+        };
+        
+        // DOM元素缓存
+        const elements = {
+            canvas: document.getElementById('storyCanvas'),
+            connections: document.getElementById('connections'),
+            treeView: document.getElementById('treeView'),
+            contextInfo: document.getElementById('contextInfo'),
+            userInput: document.getElementById('userInput'),
+            sendBtn: document.getElementById('sendBtn'),
+            deleteNodeBtn: document.getElementById('deleteNodeBtn')
+        };
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', function() {
+            const initialX = (5000 - CONSTANTS.NODE_WIDTH) / 2;
+            createNode("system", "你是一个有用的AI助手。", initialX, 200, true);
+            
+            setupEventListeners();
+            renderAll();
+            
+            const container = document.getElementById('canvasContainer');
+            container.scrollTo(initialX - container.clientWidth / 2, 0);
+        });
+        
+        // 事件监听器设置
+        function setupEventListeners() {
+            elements.deleteNodeBtn.addEventListener('click', deleteNode);
+            document.getElementById('exportBtn').addEventListener('click', exportConversation);
+            document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+            document.getElementById('importFile').addEventListener('change', importConversation);
+            document.getElementById('zoomInBtn').addEventListener('click', () => adjustZoom(0.1));
+            document.getElementById('zoomOutBtn').addEventListener('click', () => adjustZoom(-0.1));
+            document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
+            elements.sendBtn.addEventListener('click', sendMessage);
+            elements.userInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
+            document.getElementById('testApiBtn').addEventListener('click', testApiConnection);
+            
+            // 使用事件委托处理节点点击
+            elements.canvas.addEventListener('click', e => {
+                const nodeElement = e.target.closest('.node');
+                if (nodeElement) {
+                    const nodeId = nodeElement.id;
+                    if (e.target.classList.contains('node-content')) {
+                        editNodeContent(nodeId);
+                    } else {
+                        selectNode(nodeId);
+                    }
+                }
+            });
+        }
+        
+        // 节点管理
+        function createNode(role, content, x, y, isStart = false) {
+            const id = 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            
+            state.conversation.nodes[id] = {
+                id,
+                role,
+                content,
+                branches: [],
+                position: { x, y }
+            };
+            
+            if (isStart) {
+                state.conversation.startNode = id;
+                state.selectedNodeId = id;
+            }
+            
+            return id;
+        }
+        
+        function deleteNode() {
+            if (!state.selectedNodeId || state.selectedNodeId === state.conversation.startNode) {
+                alert('不能删除起始节点');
+                return;
+            }
+            
+            if (!confirm('确定要删除这个节点及其所有子节点吗？')) return;
+            
+            deleteNodeAndChildren(state.selectedNodeId);
+            state.selectedNodeId = null;
+            renderAll();
+        }
+        
+        function deleteNodeAndChildren(nodeId) {
+            if (!state.conversation.nodes[nodeId]) return;
+            
+            state.conversation.nodes[nodeId].branches.forEach(branch => {
+                deleteNodeAndChildren(branch.nextNodeId);
+            });
+            
+            Object.values(state.conversation.nodes).forEach(node => {
+                node.branches = node.branches.filter(branch => branch.nextNodeId !== nodeId);
+            });
+            
+            delete state.conversation.nodes[nodeId];
+        }
+        
+        // 消息发送
+        async function sendMessage() {
+            const userInput = elements.userInput.value.trim();
+            if (!userInput) {
+                alert('请输入问题');
+                return;
+            }
+            
+            if (!state.selectedNodeId) {
+                alert('请先选择一个节点');
+                return;
+            }
+            
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            
+            if (!apiUrl || !apiKey) {
+                alert('请设置API地址和API密钥');
+                return;
+            }
+            
+            // 禁用发送按钮
+            elements.sendBtn.disabled = true;
+            elements.userInput.disabled = true;
+            elements.sendBtn.textContent = '发送中...';
+            
+            try {
+                const contextMessages = getContextMessages(state.selectedNodeId);
+                contextMessages.push({ role: 'user', content: userInput });
+                
+                const parentNode = state.conversation.nodes[state.selectedNodeId];
+                const userNodePos = calculateNodePosition(parentNode, 'user');
+                const newUserNodeId = createNode("user", userInput, userNodePos.x, userNodePos.y);
+                
+                const assistantNodePos = calculateNodePosition(state.conversation.nodes[newUserNodeId], 'assistant');
+                const newAssistantNodeId = createNode("assistant", "", assistantNodePos.x, assistantNodePos.y);
+                
+                parentNode.branches.push({
+                    id: 'branch_' + Date.now(),
+                    text: userInput.substring(0, 30) + (userInput.length > 30 ? '...' : ''),
+                    nextNodeId: newUserNodeId
+                });
+                
+                state.conversation.nodes[newUserNodeId].branches.push({
+                    id: 'branch_' + Date.now(),
+                    text: "助手回复",
+                    nextNodeId: newAssistantNodeId
+                });
+                
+                state.selectedNodeId = newAssistantNodeId;
+                elements.userInput.value = '';
+                
+                renderAll();
+                scrollToNode(newAssistantNodeId);
+                
+                await callDeepseekAPIStream(apiUrl, apiKey, modelName, contextMessages, newAssistantNodeId);
+                
+            } catch (error) {
+                console.error('发送消息失败:', error);
+                alert('发送消息失败: ' + error.message);
+            } finally {
+                elements.sendBtn.disabled = false;
+                elements.userInput.disabled = false;
+                elements.sendBtn.textContent = '发送';
+            }
+        }
+        
+        // API通信
+        async function callDeepseekAPIStream(apiUrl, apiKey, modelName, messages, assistantNodeId) {
+            const assistantNode = state.conversation.nodes[assistantNodeId];
+            assistantNode.content = '<span class="typing-indicator"></span><span class="typing-indicator"></span><span class="typing-indicator"></span>';
+            renderNodes();
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelName,
+                        messages,
+                        stream: true
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                }
+                
+                const reader = response.body.getReader();
+                const decoder = new TextDecoder();
+                let assistantContent = '';
+                
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+                    
+                    const chunk = decoder.decode(value);
+                    const lines = chunk.split('\n');
+                    
+                    for (const line of lines) {
+                        if (line.startsWith('data: ') && line !== 'data: [DONE]') {
+                            try {
+                                const data = JSON.parse(line.slice(6));
+                                if (data.choices?.[0]?.delta?.content) {
+                                    assistantContent += data.choices[0].delta.content;
+                                    assistantNode.content = assistantContent;
+                                    renderNodes();
+                                }
+                            } catch (e) {
+                                // 忽略解析错误
+                            }
+                        }
+                    }
+                }
+                
+                assistantNode.content = assistantContent;
+                renderAll();
+                
+            } catch (error) {
+                console.error('流式响应错误:', error);
+                assistantNode.content = '错误: ' + error.message;
+                renderAll();
+            }
+        }
+        
+        async function testApiConnection() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            
+            if (!apiUrl || !apiKey) {
+                alert('请设置API地址和API密钥');
+                return;
+            }
+            
+            const testBtn = document.getElementById('testApiBtn');
+            testBtn.disabled = true;
+            testBtn.textContent = '测试中...';
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelName,
+                        messages: [
+                            { role: 'system', content: '你是一个测试助手。' },
+                            { role: 'user', content: '请回复"连接成功"以确认API连接正常。' }
+                        ],
+                        stream: false
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API请求失败: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.choices?.[0]?.message?.content) {
+                    alert('API连接成功！');
+                } else {
+                    alert('API连接测试完成，但响应不符合预期。');
+                }
+            } catch (error) {
+                alert('API连接失败: ' + error.message);
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = '测试连接';
+            }
+        }
+        
+        // 渲染系统
+        function renderAll() {
+            renderNodes();
+            renderConnections();
+            renderTreeView();
+            updateUI();
+            updateContextInfo();
+        }
+        
+        function renderNodes() {
+            const canvas = elements.canvas;
+            const existingNodes = canvas.querySelectorAll('.node');
+            const existingNodeIds = new Set(Array.from(existingNodes).map(node => node.id));
+            const currentNodeIds = new Set(Object.keys(state.conversation.nodes));
+            
+            // 移除不存在的节点
+            existingNodes.forEach(node => {
+                if (!currentNodeIds.has(node.id)) {
+                    node.remove();
+                }
+            });
+            
+            // 添加新节点或更新现有节点
+            Object.values(state.conversation.nodes).forEach(node => {
+                let nodeElement = document.getElementById(node.id);
+                
+                if (!nodeElement) {
+                    nodeElement = createNodeElement(node);
+                    canvas.appendChild(nodeElement);
+                    makeDraggable(nodeElement, node);
+                } else {
+                    updateNodeElement(nodeElement, node);
+                }
+            });
+            
+            updateSelection();
+        }
+        
+        function createNodeElement(node) {
+            const element = document.createElement('div');
+            element.className = `node ${node.role}`;
+            element.id = node.id;
+            element.style.left = node.position.x + 'px';
+            element.style.top = node.position.y + 'px';
+            
+            const roleIndicator = document.createElement('div');
+            roleIndicator.className = `role-indicator role-${node.role}`;
+            roleIndicator.textContent = node.role.toUpperCase();
+            
+            const content = document.createElement('div');
+            content.className = 'node-content';
+            
+            if (node.content.includes('typing-indicator')) {
+                content.innerHTML = node.content;
+            } else {
+                content.textContent = node.content;
+            }
+            
+            element.appendChild(roleIndicator);
+            element.appendChild(content);
+            
+            return element;
+        }
+        
+        function updateNodeElement(element, node) {
+            const content = element.querySelector('.node-content');
+            
+            if (node.content.includes('typing-indicator')) {
+                content.innerHTML = node.content;
+            } else {
+                content.textContent = node.content;
+            }
+            
+            element.style.left = node.position.x + 'px';
+            element.style.top = node.position.y + 'px';
+        }
+        
+        function renderConnections() {
+            const svg = elements.connections;
+            svg.innerHTML = '';
+            
+            Object.values(state.conversation.nodes).forEach(node => {
+                node.branches.forEach(branch => {
+                    const targetNode = state.conversation.nodes[branch.nextNodeId];
+                    if (targetNode) drawConnection(svg, node, targetNode);
+                });
+            });
+        }
+        
+        function drawConnection(svg, fromNode, toNode) {
+            const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+            
+            const fromY = fromNode.position.y + CONSTANTS.NODE_HEIGHT[fromNode.role];
+            const fromX = fromNode.position.x + CONSTANTS.NODE_WIDTH / 2;
+            const toX = toNode.position.x + CONSTANTS.NODE_WIDTH / 2;
+            const toY = toNode.position.y;
+            
+            const pathData = `M ${fromX} ${fromY} C ${fromX} ${fromY + 100}, ${toX} ${toY - 100}, ${toX} ${toY}`;
+            path.setAttribute('d', pathData);
+            
+            const pathToSelected = getPathToNode(state.conversation.startNode, state.selectedNodeId);
+            const inPath = pathToSelected.includes(fromNode.id) && pathToSelected.includes(toNode.id);
+            
+            path.setAttribute('stroke', inPath ? '#007bff' : '#6c757d');
+            path.setAttribute('stroke-width', inPath ? '2' : '1');
+            path.setAttribute('fill', 'none');
+            path.setAttribute('stroke-dasharray', inPath ? 'none' : '5,5');
+            
+            svg.appendChild(path);
+        }
+        
+        function renderTreeView() {
+            const treeView = elements.treeView;
+            treeView.innerHTML = '';
+            
+            if (state.conversation.startNode) {
+                const treeNode = createTreeNode(state.conversation.startNode);
+                treeView.appendChild(treeNode);
+            }
+        }
+        
+        function createTreeNode(nodeId) {
+            const node = state.conversation.nodes[nodeId];
+            if (!node) return null;
+            
+            const li = document.createElement('li');
+            
+            const treeNode = document.createElement('div');
+            treeNode.className = 'tree-node';
+            
+            const roleBadge = document.createElement('span');
+            roleBadge.className = `badge ${node.role === 'system' ? 'bg-success' : node.role === 'user' ? 'bg-primary' : 'bg-info'} me-1`;
+            roleBadge.textContent = node.role.substring(0, 1).toUpperCase();
+            
+            const content = document.createTextNode(
+                node.content.length > 30 ? node.content.substring(0, 30) + '...' : node.content
+            );
+            
+            treeNode.appendChild(roleBadge);
+            treeNode.appendChild(content);
+            treeNode.dataset.nodeId = nodeId;
+            
+            treeNode.addEventListener('click', (e) => {
+                e.stopPropagation();
+                selectNode(nodeId);
+                scrollToNode(nodeId);
+            });
+            
+            li.appendChild(treeNode);
+            
+            if (node.branches.length > 0) {
+                const childList = document.createElement('ul');
+                
+                node.branches.forEach(branch => {
+                    const childNode = createTreeNode(branch.nextNodeId);
+                    if (childNode) childList.appendChild(childNode);
+                });
+                
+                li.appendChild(childList);
+            }
+            
+            return li;
+        }
+        
+        // 工具函数
+        function calculateNodePosition(parentNode, nodeType) {
+            const parentPos = parentNode.position;
+            
+            const children = Object.values(state.conversation.nodes).filter(node => 
+                parentNode.branches.some(branch => branch.nextNodeId === node.id)
+            );
+            
+            let newY = parentPos.y + CONSTANTS.VERTICAL_SPACING;
+            let newX = parentPos.x;
+            
+            if (children.length > 0) {
+                const avgX = children.reduce((sum, node) => sum + node.position.x, 0) / children.length;
+                newX = avgX + (children.length * CONSTANTS.HORIZONTAL_SPACING);
+                
+                let attempts = 0;
+                while (isOverlapping(newX, newY, nodeType) && attempts < 10) {
+                    newX += CONSTANTS.HORIZONTAL_SPACING;
+                    attempts++;
+                }
+            }
+            
+            return { x: newX, y: newY };
+        }
+        
+        function isOverlapping(x, y, nodeType) {
+            const nodeWidth = CONSTANTS.NODE_WIDTH + 20;
+            const nodeHeight = CONSTANTS.NODE_HEIGHT[nodeType];
+            
+            return Object.values(state.conversation.nodes).some(node => {
+                const existingNodeHeight = CONSTANTS.NODE_HEIGHT[node.role];
+                
+                return (
+                    x < node.position.x + nodeWidth && 
+                    x + nodeWidth > node.position.x && 
+                    y < node.position.y + existingNodeHeight && 
+                    y + nodeHeight > node.position.y
+                );
+            });
+        }
+        
+        function getContextMessages(nodeId) {
+            const path = getPathToNode(state.conversation.startNode, nodeId);
+            return path.map(id => {
+                const node = state.conversation.nodes[id];
+                return { role: node.role, content: node.content };
+            });
+        }
+        
+        function getPathToNode(startNodeId, targetNodeId, path = []) {
+            if (!startNodeId) return [];
+            
+            path.push(startNodeId);
+            
+            if (startNodeId === targetNodeId) return path;
+            
+            const node = state.conversation.nodes[startNodeId];
+            for (let branch of node.branches) {
+                const result = getPathToNode(branch.nextNodeId, targetNodeId, [...path]);
+                if (result.length > 0) return result;
+            }
+            
+            return [];
+        }
+        
+        function selectNode(nodeId) {
+            state.selectedNodeId = nodeId;
+            updateSelection();
+            updateUI();
+            updateContextInfo();
+            renderConnections();
+        }
+        
+        function updateSelection() {
+            const path = getPathToNode(state.conversation.startNode, state.selectedNodeId);
+            
+            Object.values(state.conversation.nodes).forEach(node => {
+                const element = document.getElementById(node.id);
+                if (!element) return;
+                
+                const inPath = path.includes(node.id);
+                
+                if (node.id === state.selectedNodeId) {
+                    element.classList.add('selected');
+                    element.classList.remove('muted');
+                } else if (inPath) {
+                    element.classList.remove('selected');
+                    element.classList.remove('muted');
+                } else {
+                    element.classList.remove('selected');
+                    element.classList.add('muted');
+                }
+            });
+            
+            document.querySelectorAll('.tree-node').forEach(treeNode => {
+                treeNode.classList.toggle('selected', treeNode.dataset.nodeId === state.selectedNodeId);
+            });
+        }
+        
+        function updateUI() {
+            const hasSelection = state.selectedNodeId !== null;
+            elements.deleteNodeBtn.disabled = !hasSelection;
+            elements.sendBtn.disabled = !hasSelection;
+        }
+        
+        function updateContextInfo() {
+            if (!state.selectedNodeId) {
+                elements.contextInfo.textContent = '0';
+                return;
+            }
+            
+            const path = getPathToNode(state.conversation.startNode, state.selectedNodeId);
+            elements.contextInfo.textContent = path.length;
+        }
+        
+        function editNodeContent(nodeId) {
+            const node = state.conversation.nodes[nodeId];
+            const newContent = prompt('编辑节点内容:', node.content);
+            if (newContent !== null) {
+                node.content = newContent;
+                renderAll();
+            }
+        }
+        
+        function makeDraggable(element, node) {
+            element.addEventListener('mousedown', startDrag);
+            
+            function startDrag(e) {
+                if (e.target.classList.contains('node-content')) return;
+                
+                state.isDragging = true;
+                state.dragStart.x = e.clientX;
+                state.dragStart.y = e.clientY;
+                const initialX = element.offsetLeft;
+                const initialY = element.offsetTop;
+                
+                function drag(e) {
+                    if (!state.isDragging) return;
+                    
+                    const dx = e.clientX - state.dragStart.x;
+                    const dy = e.clientY - state.dragStart.y;
+                    
+                    const newX = initialX + dx;
+                    const newY = initialY + dy;
+                    
+                    element.style.left = newX + 'px';
+                    element.style.top = newY + 'px';
+                    
+                    node.position.x = newX;
+                    node.position.y = newY;
+                    
+                    renderConnections();
+                }
+                
+                function stopDrag() {
+                    state.isDragging = false;
+                    document.removeEventListener('mousemove', drag);
+                    document.removeEventListener('mouseup', stopDrag);
+                }
+                
+                document.addEventListener('mousemove', drag);
+                document.addEventListener('mouseup', stopDrag);
+                
+                e.preventDefault();
+            }
+        }
+        
+        function scrollToNode(nodeId) {
+            const nodeElement = document.getElementById(nodeId);
+            if (!nodeElement) return;
+            
+            const node = state.conversation.nodes[nodeId];
+            const nodeX = node.position.x + CONSTANTS.NODE_WIDTH / 2;
+            const nodeY = node.position.y + CONSTANTS.NODE_HEIGHT[node.role] / 2;
+            const container = document.getElementById('canvasContainer');
+            
+            const scrollX = nodeX * state.zoomLevel - container.clientWidth / 2;
+            const scrollY = nodeY * state.zoomLevel - container.clientHeight / 2;
+            
+            container.scrollTo(scrollX, scrollY);
+        }
+        
+        function adjustZoom(delta) {
+            state.zoomLevel = Math.max(0.3, Math.min(3, state.zoomLevel + delta));
+            elements.canvas.style.transform = `scale(${state.zoomLevel})`;
+            renderConnections();
+        }
+        
+        function resetZoom() {
+            state.zoomLevel = 1;
+            elements.canvas.style.transform = 'scale(1)';
+            renderConnections();
+        }
+        
+        function exportConversation() {
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
+            
+            const exportData = {
+                title: `VibeChat_${timestamp}`,
+                nodes: {},
+                startNode: state.conversation.startNode
+            };
+            
+            Object.values(state.conversation.nodes).forEach(node => {
+                exportData.nodes[node.id] = {
+                    id: node.id,
+                    role: node.role,
+                    content: node.content,
+                    branches: node.branches
+                };
+            });
+            
+            const dataStr = JSON.stringify(exportData, null, 2);
+            const dataBlob = new Blob([dataStr], {type: 'application/json'});
+            
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(dataBlob);
+            link.download = `VibeChat_${timestamp}.json`;
+            link.click();
+        }
+        
+        function importConversation(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const importedData = JSON.parse(e.target.result);
+                    
+                    if (importedData.nodes && importedData.startNode) {
+                        state.conversation = {
+                            title: importedData.title || 'VibeChat',
+                            nodes: {},
+                            startNode: importedData.startNode
+                        };
+                        
+                        Object.values(importedData.nodes).forEach(node => {
+                            state.conversation.nodes[node.id] = {
+                                id: node.id,
+                                role: node.role || 'user',
+                                content: node.content,
+                                branches: node.branches,
+                                position: { x: 0, y: 0 }
+                            };
+                        });
+                        
+                        autoArrangeNodes();
+                        state.selectedNodeId = null;
+                        renderAll();
+                        
+                        alert('对话导入成功！');
+                    } else {
+                        alert('无效的对话文件格式');
+                    }
+                } catch (error) {
+                    alert('导入失败：' + error.message);
+                }
+                
+                event.target.value = '';
+            };
+            reader.readAsText(file);
+        }
+        
+        function autoArrangeNodes() {
+            if (!state.conversation.startNode) return;
+            
+            const queue = [{nodeId: state.conversation.startNode, depth: 0}];
+            const visited = new Set();
+            const depthMap = {};
+            
+            while (queue.length > 0) {
+                const {nodeId, depth} = queue.shift();
+                
+                if (visited.has(nodeId)) continue;
+                visited.add(nodeId);
+                
+                if (!depthMap[depth]) depthMap[depth] = [];
+                depthMap[depth].push(nodeId);
+                
+                const node = state.conversation.nodes[nodeId];
+                node.branches.forEach(branch => {
+                    queue.push({nodeId: branch.nextNodeId, depth: depth + 1});
+                });
+            }
+            
+            const maxDepth = Math.max(...Object.keys(depthMap).map(Number));
+            
+            for (let depth = 0; depth <= maxDepth; depth++) {
+                const nodesAtDepth = depthMap[depth] || [];
+                const count = nodesAtDepth.length;
+                
+                const startX = 2500 - (count * CONSTANTS.HORIZONTAL_SPACING) / 2;
+                
+                nodesAtDepth.forEach((nodeId, index) => {
+                    state.conversation.nodes[nodeId].position = {
+                        x: startX + index * CONSTANTS.HORIZONTAL_SPACING,
+                        y: 200 + depth * CONSTANTS.VERTICAL_SPACING
+                    };
+                });
+            }
+        }
+    </script>
+</body>
+</html>
