@@ -74,10 +74,11 @@
             cursor: move;
             transition: all 0.2s;
             z-index: 10;
+            padding: .5rem !important;
         }
         
         .node.selected {
-            box-shadow: 0 0 0 3px #007bff, 0 5px 15px rgba(0,0,0,0.2);
+            box-shadow: 0 0 0 2px #007bff, 0 5px 15px rgba(0,0,0,0.2);
             z-index: 20;
         }
         
@@ -252,15 +253,15 @@
                                 <div id="apiSettingsCollapse" class="accordion-collapse collapse show" aria-labelledby="apiSettingsHeading" data-bs-parent="#apiSettingsAccordion">
                                     <div class="accordion-body p-3">
                                         <div class="form-group">
-                                            <label for="apiUrl" class="form-label">API地址</label>
+                                            <label for="apiUrl" class="form-label small">API地址</label>
                                             <input type="text" class="form-control form-control-sm" id="apiUrl" value="https://api.deepseek.com/chat/completions">
                                         </div>
                                         <div class="form-group mt-2">
-                                            <label for="apiKey" class="form-label">API密钥</label>
+                                            <label for="apiKey" class="form-label small">API密钥</label>
                                             <input type="password" class="form-control form-control-sm" id="apiKey" placeholder="输入API密钥">
                                         </div>
                                         <div class="form-group mt-2">
-                                            <label for="modelName" class="form-label">模型名称</label>
+                                            <label for="modelName" class="form-label small">模型名称</label>
                                             <input type="text" class="form-control form-control-sm" id="modelName" value="deepseek-chat" placeholder="输入模型名称">
                                         </div>
                                         <button class="btn btn-outline-dark btn-sm w-100 mt-3" id="testApiBtn">测试连接</button>
