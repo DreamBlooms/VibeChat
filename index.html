@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VibeChat</title>
+    <title>VibeChat(α) | 多分支 LLM WebChat</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
@@ -19,7 +19,7 @@
         
         .vibe-font {
             font-family: 'Doto', sans-serif;
-            font-weight: 600;
+            font-weight: 300;
         }
         
         .container-fluid {
@@ -220,19 +220,71 @@
             50% { opacity: 1; }
         }
         
-        .btn-group-sm {
-            display: flex;
+        .reasoning-content {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 8px;
+            margin-bottom: 8px;
+            font-size: 13px;
+            color: #6c757d;
+            max-height: 100px;
+            overflow-y: auto;
         }
         
-        .btn-group-sm .btn {
-            flex: 1;
+        .reasoning-toggle {
+            font-size: 12px;
+            color: #6c757d;
+            cursor: pointer;
+            user-select: none;
+            margin-bottom: 5px;
+            display: inline-block;
+        }
+        
+        .reasoning-toggle:hover {
+            color: #495057;
+        }
+        
+        .reasoning-collapsed {
+            max-height: 60px;
+            overflow: hidden;
+        }
+        
+        .reasoning-collapsed::after {
+            content: "...";
+            display: block;
+            text-align: center;
+            color: #adb5bd;
+        }
+
+        .resend-btn {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 2px 6px;
+            font-size: 10px;
+            cursor: pointer;
+            z-index: 15;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+        
+        .node:hover .resend-btn {
+            opacity: 1;
+        }
+        
+        .resend-btn:hover {
+            background-color: #007bff;
+            color: white;
         }
     </style>
 </head>
 <body>
     <div class="container-fluid">
         <div class="row">
-            <!-- 侧边栏 -->
             <div class="col-md-3 sidebar">
                 <div class="p-3">
                     <h3 class="mb-3 vibe-font">VibeChat<sup>(a)</sup></h3>
@@ -278,10 +330,10 @@
                 </div>
             </div>
             
-            <!-- 编辑器区域 -->
             <div class="col-md-9 editor-container">
                 <div class="toolbar">
                     <div class="btn-group">
+                        <button class="btn btn-dark btn-sm" id="clearConversationBtn">🗑️</button>
                         <button class="btn btn-danger btn-sm" id="deleteNodeBtn">删除节点</button>
                     </div>
                 </div>
@@ -315,7 +367,6 @@
 
     <script src="https://fastly.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // 应用状态
         const state = {
             conversation: {
                 title: "VibeChat",
@@ -328,7 +379,6 @@
             dragStart: { x: 0, y: 0 }
         };
         
-        // 常量配置
         const CONSTANTS = {
             HORIZONTAL_SPACING: 300,
             VERTICAL_SPACING: 250,
@@ -340,7 +390,6 @@
             }
         };
         
-        // DOM元素缓存
         const elements = {
             canvas: document.getElementById('storyCanvas'),
             connections: document.getElementById('connections'),
@@ -348,24 +397,34 @@
             contextInfo: document.getElementById('contextInfo'),
             userInput: document.getElementById('userInput'),
             sendBtn: document.getElementById('sendBtn'),
-            deleteNodeBtn: document.getElementById('deleteNodeBtn')
+            deleteNodeBtn: document.getElementById('deleteNodeBtn'),
+            clearConversationBtn: document.getElementById('clearConversationBtn')
         };
 
-        // 初始化
         document.addEventListener('DOMContentLoaded', function() {
-            const initialX = (5000 - CONSTANTS.NODE_WIDTH) / 2;
-            createNode("system", "你是一个有用的AI助手。", initialX, 200, true);
+            loadStateFromLocalStorage();
+            
+            if (!state.conversation.startNode || Object.keys(state.conversation.nodes).length === 0) {
+                const initialX = (5000 - CONSTANTS.NODE_WIDTH) / 2;
+                createNode("system", "你是一个有用的AI助手。", initialX, 200, true);
+            }
             
             setupEventListeners();
             renderAll();
             
             const container = document.getElementById('canvasContainer');
-            container.scrollTo(initialX - container.clientWidth / 2, 0);
+            if (state.selectedNodeId) {
+                scrollToNode(state.selectedNodeId);
+            } else {
+                container.scrollTo(2500 - container.clientWidth / 2, 0);
+            }
+            
+            window.addEventListener('beforeunload', saveStateToLocalStorage);
         });
         
-        // 事件监听器设置
         function setupEventListeners() {
             elements.deleteNodeBtn.addEventListener('click', deleteNode);
+            elements.clearConversationBtn.addEventListener('click', clearConversation);
             document.getElementById('exportBtn').addEventListener('click', exportConversation);
             document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
             document.getElementById('importFile').addEventListener('change', importConversation);
@@ -376,28 +435,44 @@
             elements.userInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
             document.getElementById('testApiBtn').addEventListener('click', testApiConnection);
             
-            // 使用事件委托处理节点点击
+            document.getElementById('apiUrl').addEventListener('change', saveStateToLocalStorage);
+            document.getElementById('apiKey').addEventListener('change', saveStateToLocalStorage);
+            document.getElementById('modelName').addEventListener('change', saveStateToLocalStorage);
+            
             elements.canvas.addEventListener('click', e => {
                 const nodeElement = e.target.closest('.node');
-                if (nodeElement) {
-                    const nodeId = nodeElement.id;
-                    if (e.target.classList.contains('node-content')) {
-                        editNodeContent(nodeId);
-                    } else {
-                        selectNode(nodeId);
-                    }
+                if (!nodeElement) return;
+                
+                const nodeId = nodeElement.id;
+                
+                if (e.target.classList.contains('reasoning-toggle')) {
+                    toggleReasoning(nodeId);
+                    return;
+                }
+                
+                if (e.target.classList.contains('resend-btn')) {
+                    resendMessage(nodeId);
+                    return;
+                }
+                
+                if (e.target.classList.contains('node-content') || 
+                    e.target.classList.contains('reasoning-content') ||
+                    e.target.classList.contains('final-answer')) {
+                    editNodeContent(nodeId);
+                } else {
+                    selectNode(nodeId);
                 }
             });
         }
         
-        // 节点管理
-        function createNode(role, content, x, y, isStart = false) {
+        function createNode(role, content, x, y, isStart = false, reasoning = null) {
             const id = 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
             state.conversation.nodes[id] = {
                 id,
                 role,
                 content,
+                reasoning,
                 branches: [],
                 position: { x, y }
             };
@@ -421,6 +496,7 @@
             deleteNodeAndChildren(state.selectedNodeId);
             state.selectedNodeId = null;
             renderAll();
+            saveStateToLocalStorage();
         }
         
         function deleteNodeAndChildren(nodeId) {
@@ -437,7 +513,24 @@
             delete state.conversation.nodes[nodeId];
         }
         
-        // 消息发送
+        function clearConversation() {
+            if (!confirm('确定要清空对话吗？这将删除所有节点，只保留系统提示消息。')) return;
+            if (!confirm('再次确认：这将永久删除所有对话内容，只保留系统节点。')) return;
+            
+            const systemNode = state.conversation.nodes[state.conversation.startNode];
+            if (!systemNode) return;
+            
+            state.conversation.nodes = {};
+            state.conversation.nodes[state.conversation.startNode] = systemNode;
+            systemNode.branches = [];
+            state.selectedNodeId = state.conversation.startNode;
+            
+            renderAll();
+            saveStateToLocalStorage();
+            
+            alert('对话已清空，只保留系统提示消息。');
+        }
+        
         async function sendMessage() {
             const userInput = elements.userInput.value.trim();
             if (!userInput) {
@@ -459,7 +552,6 @@
                 return;
             }
             
-            // 禁用发送按钮
             elements.sendBtn.disabled = true;
             elements.userInput.disabled = true;
             elements.sendBtn.textContent = '发送中...';
@@ -502,12 +594,57 @@
                 elements.sendBtn.disabled = false;
                 elements.userInput.disabled = false;
                 elements.sendBtn.textContent = '发送';
+                saveStateToLocalStorage();
             }
         }
         
-        // API通信
+        async function resendMessage(userNodeId) {
+            const userNode = state.conversation.nodes[userNodeId];
+            if (!userNode || userNode.role !== 'user') {
+                alert('只能在用户节点上重发');
+                return;
+            }
+            
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            
+            if (!apiUrl || !apiKey) {
+                alert('请设置API地址和API密钥');
+                return;
+            }
+            
+            const assistantNodePos = calculateNodePosition(userNode, 'assistant');
+            const newAssistantNodeId = createNode("assistant", "", assistantNodePos.x, assistantNodePos.y);
+            
+            userNode.branches.push({
+                id: 'branch_' + Date.now(),
+                text: "助手回复",
+                nextNodeId: newAssistantNodeId
+            });
+            
+            state.selectedNodeId = newAssistantNodeId;
+            
+            renderAll();
+            scrollToNode(newAssistantNodeId);
+            
+            const contextMessages = getContextMessages(userNodeId);
+            
+            try {
+                await callDeepseekAPIStream(apiUrl, apiKey, modelName, contextMessages, newAssistantNodeId);
+                saveStateToLocalStorage();
+            } catch (error) {
+                console.error('重发消息失败:', error);
+                alert('重发消息失败: ' + error.message);
+            }
+        }
+        
         async function callDeepseekAPIStream(apiUrl, apiKey, modelName, messages, assistantNodeId) {
             const assistantNode = state.conversation.nodes[assistantNodeId];
+            
+            assistantNode.content = '';
+            assistantNode.reasoning = null;
+            
             assistantNode.content = '<span class="typing-indicator"></span><span class="typing-indicator"></span><span class="typing-indicator"></span>';
             renderNodes();
             
@@ -532,6 +669,8 @@
                 const reader = response.body.getReader();
                 const decoder = new TextDecoder();
                 let assistantContent = '';
+                let reasoningContent = '';
+                let isReasonerModel = false;
                 
                 while (true) {
                     const { done, value } = await reader.read();
@@ -544,11 +683,19 @@
                         if (line.startsWith('data: ') && line !== 'data: [DONE]') {
                             try {
                                 const data = JSON.parse(line.slice(6));
+                                
+                                if (data.choices?.[0]?.delta?.reasoning_content !== undefined) {
+                                    isReasonerModel = true;
+                                    reasoningContent += data.choices[0].delta.reasoning_content || '';
+                                    assistantNode.reasoning = reasoningContent;
+                                }
+                                
                                 if (data.choices?.[0]?.delta?.content) {
                                     assistantContent += data.choices[0].delta.content;
                                     assistantNode.content = assistantContent;
-                                    renderNodes();
                                 }
+                                
+                                renderNodes();
                             } catch (e) {
                                 // 忽略解析错误
                             }
@@ -556,7 +703,13 @@
                     }
                 }
                 
-                assistantNode.content = assistantContent;
+                if (isReasonerModel) {
+                    assistantNode.reasoning = reasoningContent;
+                    assistantNode.content = assistantContent;
+                } else {
+                    assistantNode.content = assistantContent;
+                }
+                
                 renderAll();
                 
             } catch (error) {
@@ -616,7 +769,6 @@
             }
         }
         
-        // 渲染系统
         function renderAll() {
             renderNodes();
             renderConnections();
@@ -631,14 +783,12 @@
             const existingNodeIds = new Set(Array.from(existingNodes).map(node => node.id));
             const currentNodeIds = new Set(Object.keys(state.conversation.nodes));
             
-            // 移除不存在的节点
             existingNodes.forEach(node => {
                 if (!currentNodeIds.has(node.id)) {
                     node.remove();
                 }
             });
             
-            // 添加新节点或更新现有节点
             Object.values(state.conversation.nodes).forEach(node => {
                 let nodeElement = document.getElementById(node.id);
                 
@@ -665,13 +815,52 @@
             roleIndicator.className = `role-indicator role-${node.role}`;
             roleIndicator.textContent = node.role.toUpperCase();
             
+            if (node.role === 'user') {
+                const resendBtn = document.createElement('button');
+                resendBtn.className = 'resend-btn';
+                resendBtn.textContent = '↻';
+                resendBtn.title = '重发此消息';
+                element.appendChild(resendBtn);
+            }
+            
             const content = document.createElement('div');
             content.className = 'node-content';
             
-            if (node.content.includes('typing-indicator')) {
-                content.innerHTML = node.content;
+            if (node.reasoning !== undefined && node.reasoning !== null) {
+                const reasoningToggle = document.createElement('div');
+                reasoningToggle.className = 'reasoning-toggle';
+                reasoningToggle.textContent = '↕ 推理过程';
+                reasoningToggle.dataset.nodeId = node.id;
+                
+                const reasoningContent = document.createElement('div');
+                reasoningContent.className = 'reasoning-content reasoning-collapsed';
+                reasoningContent.dataset.nodeId = node.id;
+                
+                if (node.reasoning.includes('typing-indicator')) {
+                    reasoningContent.innerHTML = node.reasoning;
+                } else {
+                    reasoningContent.textContent = node.reasoning;
+                }
+                
+                const finalAnswer = document.createElement('div');
+                finalAnswer.className = 'final-answer';
+                finalAnswer.style.marginTop = '8px';
+                
+                if (node.content.includes('typing-indicator')) {
+                    finalAnswer.innerHTML = node.content;
+                } else {
+                    finalAnswer.textContent = node.content;
+                }
+                
+                content.appendChild(reasoningToggle);
+                content.appendChild(reasoningContent);
+                content.appendChild(finalAnswer);
             } else {
-                content.textContent = node.content;
+                if (node.content.includes('typing-indicator')) {
+                    content.innerHTML = node.content;
+                } else {
+                    content.textContent = node.content;
+                }
             }
             
             element.appendChild(roleIndicator);
@@ -683,14 +872,61 @@
         function updateNodeElement(element, node) {
             const content = element.querySelector('.node-content');
             
-            if (node.content.includes('typing-indicator')) {
-                content.innerHTML = node.content;
+            if (node.reasoning !== undefined && node.reasoning !== null) {
+                let reasoningToggle = content.querySelector('.reasoning-toggle');
+                let reasoningContent = content.querySelector('.reasoning-content');
+                let finalAnswer = content.querySelector('.final-answer');
+                
+                if (!reasoningToggle) {
+                    content.innerHTML = '';
+                    
+                    reasoningToggle = document.createElement('div');
+                    reasoningToggle.className = 'reasoning-toggle';
+                    reasoningToggle.textContent = '↕ 推理过程';
+                    reasoningToggle.dataset.nodeId = node.id;
+                    
+                    reasoningContent = document.createElement('div');
+                    reasoningContent.className = 'reasoning-content reasoning-collapsed';
+                    reasoningContent.dataset.nodeId = node.id;
+                    
+                    finalAnswer = document.createElement('div');
+                    finalAnswer.className = 'final-answer';
+                    finalAnswer.style.marginTop = '8px';
+                    
+                    content.appendChild(reasoningToggle);
+                    content.appendChild(reasoningContent);
+                    content.appendChild(finalAnswer);
+                }
+                
+                if (node.reasoning.includes('typing-indicator')) {
+                    reasoningContent.innerHTML = node.reasoning;
+                } else {
+                    reasoningContent.textContent = node.reasoning;
+                }
+                
+                if (node.content.includes('typing-indicator')) {
+                    finalAnswer.innerHTML = node.content;
+                } else {
+                    finalAnswer.textContent = node.content;
+                }
             } else {
-                content.textContent = node.content;
+                if (node.content.includes('typing-indicator')) {
+                    content.innerHTML = node.content;
+                } else {
+                    content.textContent = node.content;
+                }
             }
             
             element.style.left = node.position.x + 'px';
             element.style.top = node.position.y + 'px';
+            
+            if (node.role === 'user' && !element.querySelector('.resend-btn')) {
+                const resendBtn = document.createElement('button');
+                resendBtn.className = 'resend-btn';
+                resendBtn.textContent = '↻';
+                resendBtn.title = '重发此消息';
+                element.appendChild(resendBtn);
+            }
         }
         
         function renderConnections() {
@@ -713,7 +949,7 @@
             const toX = toNode.position.x + CONSTANTS.NODE_WIDTH / 2;
             const toY = toNode.position.y;
             
-            const pathData = `M ${fromX} ${fromY} C ${fromX} ${fromY + 100}, ${toX} ${toY - 100}, ${toX} ${toY}`;
+            const pathData = `M ${fromX} ${fromY} C ${fromX} ${fromY + 125}, ${toX} ${toY - 125}, ${toX} ${toY}`;
             path.setAttribute('d', pathData);
             
             const pathToSelected = getPathToNode(state.conversation.startNode, state.selectedNodeId);
@@ -780,7 +1016,6 @@
             return li;
         }
         
-        // 工具函数
         function calculateNodePosition(parentNode, nodeType) {
             const parentPos = parentNode.position;
             
@@ -851,6 +1086,7 @@
             updateUI();
             updateContextInfo();
             renderConnections();
+            saveStateToLocalStorage();
         }
         
         function updateSelection() {
@@ -897,18 +1133,43 @@
         
         function editNodeContent(nodeId) {
             const node = state.conversation.nodes[nodeId];
-            const newContent = prompt('编辑节点内容:', node.content);
-            if (newContent !== null) {
-                node.content = newContent;
-                renderAll();
+            
+            if (node.reasoning !== undefined && node.reasoning !== null) {
+                const newContent = prompt('编辑节点最终回答:', node.content);
+                if (newContent !== null) {
+                    node.content = newContent;
+                    renderAll();
+                    saveStateToLocalStorage();
+                }
+            } else {
+                const newContent = prompt('编辑节点内容:', node.content);
+                if (newContent !== null) {
+                    node.content = newContent;
+                    renderAll();
+                    saveStateToLocalStorage();
+                }
             }
+        }
+        
+        function toggleReasoning(nodeId) {
+            const nodeElement = document.getElementById(nodeId);
+            if (!nodeElement) return;
+            
+            const reasoningContent = nodeElement.querySelector('.reasoning-content');
+            if (!reasoningContent) return;
+            
+            reasoningContent.classList.toggle('reasoning-collapsed');
         }
         
         function makeDraggable(element, node) {
             element.addEventListener('mousedown', startDrag);
             
             function startDrag(e) {
-                if (e.target.classList.contains('node-content')) return;
+                if (e.target.classList.contains('node-content') || 
+                    e.target.classList.contains('reasoning-content') ||
+                    e.target.classList.contains('final-answer') ||
+                    e.target.classList.contains('reasoning-toggle') ||
+                    e.target.classList.contains('resend-btn')) return;
                 
                 state.isDragging = true;
                 state.dragStart.x = e.clientX;
@@ -938,6 +1199,7 @@
                     state.isDragging = false;
                     document.removeEventListener('mousemove', drag);
                     document.removeEventListener('mouseup', stopDrag);
+                    saveStateToLocalStorage();
                 }
                 
                 document.addEventListener('mousemove', drag);
@@ -974,6 +1236,55 @@
             renderConnections();
         }
         
+        function saveStateToLocalStorage() {
+            try {
+                const stateToSave = {
+                    conversation: state.conversation,
+                    selectedNodeId: state.selectedNodeId,
+                    zoomLevel: state.zoomLevel,
+                    apiSettings: {
+                        apiUrl: document.getElementById('apiUrl').value,
+                        apiKey: document.getElementById('apiKey').value,
+                        modelName: document.getElementById('modelName').value
+                    }
+                };
+                
+                localStorage.setItem('vibechat-state', JSON.stringify(stateToSave));
+            } catch (error) {
+                console.error('保存到localStorage失败:', error);
+            }
+        }
+        
+        function loadStateFromLocalStorage() {
+            try {
+                const savedState = localStorage.getItem('vibechat-state');
+                if (savedState) {
+                    const parsedState = JSON.parse(savedState);
+                    
+                    if (parsedState.conversation) {
+                        state.conversation = parsedState.conversation;
+                    }
+                    
+                    if (parsedState.selectedNodeId) {
+                        state.selectedNodeId = parsedState.selectedNodeId;
+                    }
+                    
+                    if (parsedState.zoomLevel) {
+                        state.zoomLevel = parsedState.zoomLevel;
+                        elements.canvas.style.transform = `scale(${state.zoomLevel})`;
+                    }
+                    
+                    if (parsedState.apiSettings) {
+                        document.getElementById('apiUrl').value = parsedState.apiSettings.apiUrl || 'https://api.deepseek.com/chat/completions';
+                        document.getElementById('apiKey').value = parsedState.apiSettings.apiKey || '';
+                        document.getElementById('modelName').value = parsedState.apiSettings.modelName || 'deepseek-chat';
+                    }
+                }
+            } catch (error) {
+                console.error('从localStorage恢复状态失败:', error);
+            }
+        }
+        
         function exportConversation() {
             const now = new Date();
             const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
@@ -989,6 +1300,7 @@
                     id: node.id,
                     role: node.role,
                     content: node.content,
+                    reasoning: node.reasoning,
                     branches: node.branches
                 };
             });
@@ -1023,6 +1335,7 @@
                                 id: node.id,
                                 role: node.role || 'user',
                                 content: node.content,
+                                reasoning: node.reasoning,
                                 branches: node.branches,
                                 position: { x: 0, y: 0 }
                             };
@@ -1031,6 +1344,7 @@
                         autoArrangeNodes();
                         state.selectedNodeId = null;
                         renderAll();
+                        saveStateToLocalStorage();
                         
                         alert('对话导入成功！');
                     } else {
