@@ -43,7 +43,7 @@
         .zoom-controls { right: 20px; }
         .toolbar { left: 20px; }
         .chat-input-container { background-color: white; padding: 25px; border-top: 1px solid #dee2e6; z-index: 100; flex-shrink: 0; }
-        .api-settings { background-color: #495057; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .api-settings { padding: 4px 4px; }
         .role-indicator { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-bottom: 5px; display: inline-block; }
         .role-system { background-color: #28a745; color: white; }
         .role-user { background-color: #007bff; color: white; }
@@ -91,7 +91,7 @@
             <div class="col-md-3 sidebar">
                 <div class="p-3">
                     <h3 class="mb-3 vibe-font">VibeChat<sup>(a)</sup></h3>
-                    <div class="d-flex mb-3">
+                    <div class="d-flex mb-2">
                         <button class="btn btn-outline-light btn-sm m-1 flex-fill" id="exportBtn">导出</button>
                         <button class="btn btn-outline-light btn-sm m-1 flex-fill" id="importBtn">导入</button>
                     </div>
@@ -101,7 +101,7 @@
                         <div class="accordion" id="apiSettingsAccordion">
                             <div class="accordion-item border-0">
                                 <h2 class="accordion-header" id="apiSettingsHeading">
-                                    <button class="accordion-button bg-transparent p-2 ps-3" type="button" data-bs-toggle="collapse" data-bs-target="#apiSettingsCollapse" aria-expanded="true" aria-controls="apiSettingsCollapse">
+                                    <button class="accordion-button bg-transparent p-2 ps-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#apiSettingsCollapse" aria-expanded="true" aria-controls="apiSettingsCollapse">
                                         <h6 class="mb-0">API设置</h6>
                                     </button>
                                 </h2>
