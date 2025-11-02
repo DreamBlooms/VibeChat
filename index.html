@@ -64,6 +64,32 @@
         .copy-success { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background-color: #0dcaf0; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 15; opacity: 0; transition: opacity 0.2s; }
         .copy-success.show { opacity: 1; }
         
+        /* 移动端优化 */
+        .mobile-sidebar-toggle {
+            display: none;
+            position: absolute;
+            top: -3px;
+            left: -3px;
+            z-index: 1000;
+            background: rgba(52, 58, 64, 0.9);
+            border: none;
+            color: white;
+            border-radius: 4px;
+            padding: 8px 12px;
+            font-size: 14px;
+        }
+        
+        .sidebar-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        
         /* 精简的Markdown样式 */
         .node-content { font-size: 14px; line-height: 1.5; word-wrap: break-word; }
         .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 { margin-top: 0.5em; margin-bottom: 0.3em; font-weight: 600; line-height: 1.25; }
@@ -83,12 +109,77 @@
         .node-content table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; }
         .node-content table th, .node-content table td { border: 1px solid #dee2e6; padding: 0.3em 0.5em; text-align: left; }
         .node-content table th { background-color: #f8f9fa; font-weight: 600; }
+        
+        /* 移动端响应式样式 */
+        @media (max-width: 768px) {
+            .mobile-sidebar-toggle {
+                display: block;
+            }
+            
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 85%;
+                max-width: 300px;
+                z-index: 1000;
+                transition: left 0.3s ease;
+            }
+            
+            .sidebar.active {
+                left: 0;
+            }
+            
+            .editor-container {
+                width: 100%;
+            }
+            
+            .node {
+                width: 90%;
+                max-width: 400px;
+            }
+            
+            .toolbar {
+                left: 60px;
+            }
+            
+            .chat-input-container {
+                padding: 15px;
+            }
+            
+            .zoom-controls {
+                right: 10px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .node {
+                width: 95%;
+                max-width: 350px;
+            }
+            
+            .toolbar {
+                left: 50px;
+            }
+            
+            .zoom-controls {
+                right: 5px;
+            }
+            
+            .chat-input-container {
+                padding: 10px;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- 移动端侧边栏切换按钮 -->
+    <button class="mobile-sidebar-toggle" id="mobileSidebarToggle">☰</button>
+    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    
     <div class="container-fluid">
         <div class="row">
-            <div class="col-md-3 sidebar">
+            <div class="col-md-3 sidebar" id="sidebar">
                 <div class="p-3">
                     <h3 class="mb-3 vibe-font">VibeChat<sup>(a)</sup></h3>
                     <div class="d-flex mb-2">
@@ -203,7 +294,8 @@
             selectedNodeId: null,
             zoomLevel: 1,
             isDragging: false,
-            dragStart: { x: 0, y: 0 }
+            dragStart: { x: 0, y: 0 },
+            isMobile: window.innerWidth <= 768
         };
         
         // DOM 元素引用
@@ -215,7 +307,10 @@
             userInput: document.getElementById('userInput'),
             sendBtn: document.getElementById('sendBtn'),
             deleteNodeBtn: document.getElementById('deleteNodeBtn'),
-            clearConversationBtn: document.getElementById('clearConversationBtn')
+            clearConversationBtn: document.getElementById('clearConversationBtn'),
+            sidebar: document.getElementById('sidebar'),
+            mobileSidebarToggle: document.getElementById('mobileSidebarToggle'),
+            sidebarBackdrop: document.getElementById('sidebarBackdrop')
         };
 
         // 初始化应用
@@ -228,6 +323,7 @@
             }
             
             setupEventListeners();
+            setupMobileEvents();
             renderAll();
             
             const container = document.getElementById('canvasContainer');
@@ -238,7 +334,41 @@
             }
             
             window.addEventListener('beforeunload', saveStateToLocalStorage);
+            window.addEventListener('resize', handleResize);
         });
+        
+        // 移动端事件设置
+        function setupMobileEvents() {
+            if (!state.isMobile) return;
+            
+            elements.mobileSidebarToggle.addEventListener('click', toggleSidebar);
+            elements.sidebarBackdrop.addEventListener('click', closeSidebar);
+            
+            // 点击树节点时自动关闭侧边栏
+            elements.treeView.addEventListener('click', function(e) {
+                if (e.target.closest('.tree-node')) {
+                    setTimeout(closeSidebar, 300);
+                }
+            });
+        }
+        
+        function toggleSidebar() {
+            elements.sidebar.classList.toggle('active');
+            elements.sidebarBackdrop.style.display = elements.sidebar.classList.contains('active') ? 'block' : 'none';
+        }
+        
+        function closeSidebar() {
+            elements.sidebar.classList.remove('active');
+            elements.sidebarBackdrop.style.display = 'none';
+        }
+        
+        function handleResize() {
+            state.isMobile = window.innerWidth <= 768;
+            
+            if (!state.isMobile) {
+                closeSidebar();
+            }
+        }
         
         // 事件监听器设置
         function setupEventListeners() {
@@ -247,16 +377,12 @@
             document.getElementById('exportBtn').addEventListener('click', exportConversation);
             document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
             document.getElementById('importFile').addEventListener('change', importConversation);
+            document.getElementById('zoomInBtn').addEventListener('click', () => adjustZoom(0.1));
             document.getElementById('zoomOutBtn').addEventListener('click', () => adjustZoom(-0.1));
             document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
             elements.sendBtn.addEventListener('click', sendMessage);
             elements.userInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
             document.getElementById('testApiBtn').addEventListener('click', testApiConnection);
-            
-            // API设置变化时保存状态
-            // ['apiUrl', 'apiKey', 'modelName', 'temperature'].forEach(id => {
-            //    document.getElementById(id).addEventListener('change', saveStateToLocalStorage);
-            //});
             
             // 节点事件委托
             elements.canvas.addEventListener('click', handleNodeClick);
