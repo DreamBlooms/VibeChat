@@ -8,278 +8,79 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
     <link href="https://fastly.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://fastly.jsdelivr.net/npm/marked/marked.min.js"></script>
     <style>
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: 'Microsoft Yahei UI', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background-color: #f8f9fa;
             overflow: hidden;
             margin: 0;
             padding: 0;
         }
         
-        .vibe-font {
-            font-family: 'Doto', sans-serif;
-            font-weight: 300;
-        }
+        .vibe-font { font-family: 'Doto', sans-serif; font-weight: 300; }
+        .container-fluid { height: 100vh; padding: 0; }
+        .sidebar { background-color: #343a40; color: white; height: 100vh; overflow-y: auto; }
+        .editor-container { position: relative; height: 100vh; overflow: hidden; background-color: #e9ecef; display: flex; flex-direction: column; padding: 0 !important; }
+        .story-canvas-container { position: relative; width: 100%; flex: 1; overflow: auto; }
+        .story-canvas { position: relative; width: 5000px; height: 5000px; background-color: #e9ecef; background-image: linear-gradient(#dee2e6 1px, transparent 1px), linear-gradient(90deg, #dee2e6 1px, transparent 1px); background-size: 20px 20px; transform-origin: 0 0; transition: transform 0.1s ease; }
+        .node { position: absolute; width: 450px; background-color: white; border-radius: 8px; box-shadow: 0 3px 10px rgba(0,0,0,0.1); padding: 15px; cursor: move; transition: all 0.2s; z-index: 10; padding: .5rem !important; }
+        .node.selected { box-shadow: 0 0 0 2px #007bff, 0 5px 15px rgba(0,0,0,0.2); z-index: 20; }
+        .node.muted { opacity: 0.4; background-color: #f8f9fa; }
+        .node.system { border-left: 5px solid #28a745; height: 150px; }
+        .node.user { border-left: 5px solid #007bff; height: 150px; }
+        .node.assistant { border-left: 5px solid #6f42c1; height: 250px; }
+        .node-content { font-size: 14px; margin-bottom: 0; border: 1px dashed #dee2e6; padding: 8px; border-radius: 4px; word-break: break-word; overflow-y: auto; height: calc(100% - 25px); }
+        .connections { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
+        .tree-view { list-style-type: none; padding-left: 0; min-width: 200px; overflow-x: auto; }
+        .tree-view ul { list-style-type: none; padding-left: 20px; }
+        .tree-node { padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; min-width: 200px; font-size: .875em; }
+        .tree-node:hover { background-color: #495057; }
+        .tree-node.selected { background-color: #007bff; }
+        .zoom-controls, .toolbar { position: absolute; top: 20px; z-index: 100; }
+        .zoom-controls { right: 20px; }
+        .toolbar { left: 20px; }
+        .chat-input-container { background-color: white; padding: 25px; border-top: 1px solid #dee2e6; z-index: 100; flex-shrink: 0; }
+        .api-settings { background-color: #495057; padding: 15px; border-radius: 5px; margin-bottom: 15px; }
+        .role-indicator { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-bottom: 5px; display: inline-block; }
+        .role-system { background-color: #28a745; color: white; }
+        .role-user { background-color: #007bff; color: white; }
+        .role-assistant { background-color: #6f42c1; color: white; }
+        .typing-indicator { display: inline-block; width: 10px; height: 10px; background-color: #6c757d; border-radius: 50%; margin-right: 5px; animation: typing 1s infinite; }
+        @keyframes typing { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
+        .reasoning-content { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 8px; margin-bottom: 8px; font-size: 13px; color: #6c757d; max-height: 120px; overflow-y: auto; }
+        .reasoning-toggle { font-size: 12px; color: #6c757d; cursor: pointer; user-select: none; margin-bottom: 5px; display: inline-block; }
+        .reasoning-toggle:hover { color: #495057; }
+        .reasoning-collapsed { max-height: 55px; overflow: hidden; }
+        .reasoning-collapsed::after { content: "..."; display: block; text-align: center; color: #adb5bd; }
+        .resend-btn, .copy-btn { position: absolute; top: 5px; background: rgba(255, 255, 255, 0.9); border: 1px solid #dee2e6; border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; z-index: 15; opacity: 0; transition: opacity 0.2s; }
+        .copy-btn { right: 5px; }
+        .resend-btn { right: 30px; }
+        .node:hover .resend-btn, .node:hover .copy-btn { opacity: 1; }
+        .resend-btn:hover { background-color: #007bff; color: white; }
+        .copy-btn:hover { background-color: #28a745; color: white; }
+        .copy-success { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background-color: #0dcaf0; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 15; opacity: 0; transition: opacity 0.2s; }
+        .copy-success.show { opacity: 1; }
         
-        .container-fluid {
-            height: 100vh;
-            padding: 0;
-        }
-        
-        .sidebar {
-            background-color: #343a40;
-            color: white;
-            height: 100vh;
-            overflow-y: auto;
-        }
-        
-        .editor-container {
-            position: relative;
-            height: 100vh;
-            overflow: hidden;
-            background-color: #e9ecef;
-            display: flex;
-            flex-direction: column;
-            padding: 0 !important;
-        }
-        
-        .story-canvas-container {
-            position: relative;
-            width: 100%;
-            flex: 1;
-            overflow: auto;
-        }
-        
-        .story-canvas {
-            position: relative;
-            width: 5000px;
-            height: 5000px;
-            background-color: #e9ecef;
-            background-image: 
-                linear-gradient(#dee2e6 1px, transparent 1px),
-                linear-gradient(90deg, #dee2e6 1px, transparent 1px);
-            background-size: 20px 20px;
-            transform-origin: 0 0;
-            transition: transform 0.1s ease;
-        }
-        
-        .node {
-            position: absolute;
-            width: 450px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
-            padding: 15px;
-            cursor: move;
-            transition: all 0.2s;
-            z-index: 10;
-            padding: .5rem !important;
-        }
-        
-        .node.selected {
-            box-shadow: 0 0 0 2px #007bff, 0 5px 15px rgba(0,0,0,0.2);
-            z-index: 20;
-        }
-        
-        .node.muted {
-            opacity: 0.4;
-            background-color: #f8f9fa;
-        }
-        
-        .node.system {
-            border-left: 5px solid #28a745;
-            height: 150px;
-        }
-        
-        .node.user {
-            border-left: 5px solid #007bff;
-            height: 150px;
-        }
-        
-        .node.assistant {
-            border-left: 5px solid #6f42c1;
-            height: 250px;
-        }
-        
-        .node-content {
-            font-size: 14px;
-            margin-bottom: 0;
-            border: 1px dashed #dee2e6;
-            padding: 8px;
-            border-radius: 4px;
-            word-break: break-word;
-            overflow-y: auto;
-            height: calc(100% - 25px);
-        }
-        
-        .connections {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 5;
-        }
-        
-        .tree-view {
-            list-style-type: none;
-            padding-left: 0;
-            min-width: 200px;
-            overflow-x: auto;
-        }
-        
-        .tree-view ul {
-            list-style-type: none;
-            padding-left: 20px;
-        }
-        
-        .tree-node {
-            padding: 5px 10px;
-            cursor: pointer;
-            border-radius: 4px;
-            margin-bottom: 2px;
-            min-width: 200px;
-            font-size: .875em;
-        }
-        
-        .tree-node:hover {
-            background-color: #495057;
-        }
-        
-        .tree-node.selected {
-            background-color: #007bff;
-        }
-        
-        .zoom-controls {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            z-index: 100;
-        }
-        
-        .toolbar {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            z-index: 100;
-        }
-        
-        .chat-input-container {
-            background-color: white;
-            padding: 25px;
-            border-top: 1px solid #dee2e6;
-            z-index: 100;
-            flex-shrink: 0;
-        }
-        
-        .api-settings {
-            background-color: #495057;
-            padding: 15px;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-        
-        .role-indicator {
-            font-size: 10px;
-            font-weight: bold;
-            padding: 2px 6px;
-            border-radius: 10px;
-            margin-bottom: 5px;
-            display: inline-block;
-        }
-        
-        .role-system {
-            background-color: #28a745;
-            color: white;
-        }
-        
-        .role-user {
-            background-color: #007bff;
-            color: white;
-        }
-        
-        .role-assistant {
-            background-color: #6f42c1;
-            color: white;
-        }
-        
-        .typing-indicator {
-            display: inline-block;
-            width: 10px;
-            height: 10px;
-            background-color: #6c757d;
-            border-radius: 50%;
-            margin-right: 5px;
-            animation: typing 1s infinite;
-        }
-        
-        @keyframes typing {
-            0%, 100% { opacity: 0.3; }
-            50% { opacity: 1; }
-        }
-        
-        .reasoning-content {
-            background-color: #f8f9fa;
-            border: 1px solid #e9ecef;
-            border-radius: 4px;
-            padding: 8px;
-            margin-bottom: 8px;
-            font-size: 13px;
-            color: #6c757d;
-            max-height: 100px;
-            overflow-y: auto;
-        }
-        
-        .reasoning-toggle {
-            font-size: 12px;
-            color: #6c757d;
-            cursor: pointer;
-            user-select: none;
-            margin-bottom: 5px;
-            display: inline-block;
-        }
-        
-        .reasoning-toggle:hover {
-            color: #495057;
-        }
-        
-        .reasoning-collapsed {
-            max-height: 60px;
-            overflow: hidden;
-        }
-        
-        .reasoning-collapsed::after {
-            content: "...";
-            display: block;
-            text-align: center;
-            color: #adb5bd;
-        }
-
-        .resend-btn {
-            position: absolute;
-            top: 5px;
-            right: 5px;
-            background: rgba(255, 255, 255, 0.9);
-            border: 1px solid #dee2e6;
-            border-radius: 4px;
-            padding: 2px 6px;
-            font-size: 10px;
-            cursor: pointer;
-            z-index: 15;
-            opacity: 0;
-            transition: opacity 0.2s;
-        }
-        
-        .node:hover .resend-btn {
-            opacity: 1;
-        }
-        
-        .resend-btn:hover {
-            background-color: #007bff;
-            color: white;
-        }
+        /* 精简的Markdown样式 */
+        .node-content { font-size: 14px; line-height: 1.5; word-wrap: break-word; }
+        .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 { margin-top: 0.5em; margin-bottom: 0.3em; font-weight: 600; line-height: 1.25; }
+        .node-content h1 { font-size: 1.5rem !important; }
+        .node-content h2 { font-size: 1.3rem !important; }
+        .node-content h3 { font-size: 1.2rem !important; }
+        .node-content h4 { font-size: 1.1rem !important; }
+        .node-content h5 { font-size: 1.05rem !important; }
+        .node-content h6 { font-size: 1rem !important; color: #6c757d !important; }
+        .node-content p { margin-bottom: 0.5em; }
+        .node-content ul, .node-content ol { padding-left: 1.5em; margin-bottom: 0.5em; }
+        .node-content li { margin-bottom: 0.2em; }
+        .node-content code { background-color: #f1f3f4; border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.9em; font-family: 'Courier New', monospace; }
+        .node-content pre { background-color: #f8f9fa; border: 1px solid #e9ecef; border-radius: 4px; padding: 0.8em; overflow: auto; margin-bottom: 0.8em; }
+        .node-content pre code { background: none; padding: 0; }
+        .node-content blockquote { border-left: 4px solid #dee2e6; padding-left: 1em; margin-left: 0; color: #6c757d; margin-bottom: 0.8em; }
+        .node-content table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; }
+        .node-content table th, .node-content table td { border: 1px solid #dee2e6; padding: 0.3em 0.5em; text-align: left; }
+        .node-content table th { background-color: #f8f9fa; font-weight: 600; }
     </style>
 </head>
 <body>
@@ -315,6 +116,10 @@
                                         <div class="form-group mt-2">
                                             <label for="modelName" class="form-label small">模型名称</label>
                                             <input type="text" class="form-control form-control-sm" id="modelName" value="deepseek-chat" placeholder="输入模型名称">
+                                        </div>
+                                        <div class="form-group mt-2">
+                                            <label for="temperature" class="form-label small">温度<small> (0.1-2.0)</small></label>
+                                            <input type="number" class="form-control form-control-sm" id="temperature" min="0" max="2" step="0.1" value="1.0">
                                         </div>
                                         <button class="btn btn-outline-dark btn-sm w-100 mt-3" id="testApiBtn">测试连接</button>
                                     </div>
@@ -367,6 +172,27 @@
 
     <script src="https://fastly.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // 配置 marked.js
+        marked.setOptions({
+            breaks: true,
+            gfm: true,
+            headerIds: false,
+            mangle: false
+        });
+        
+        // 应用常量
+        const CONSTANTS = {
+            HORIZONTAL_SPACING: 300,
+            VERTICAL_SPACING: 250,
+            NODE_WIDTH: 450,
+            NODE_HEIGHT: {
+                user: 150,
+                assistant: 250,
+                system: 150
+            }
+        };
+        
+        // 应用状态
         const state = {
             conversation: {
                 title: "VibeChat",
@@ -379,17 +205,7 @@
             dragStart: { x: 0, y: 0 }
         };
         
-        const CONSTANTS = {
-            HORIZONTAL_SPACING: 300,
-            VERTICAL_SPACING: 250,
-            NODE_WIDTH: 450,
-            NODE_HEIGHT: {
-                user: 150,
-                assistant: 250,
-                system: 150
-            }
-        };
-        
+        // DOM 元素引用
         const elements = {
             canvas: document.getElementById('storyCanvas'),
             connections: document.getElementById('connections'),
@@ -401,6 +217,7 @@
             clearConversationBtn: document.getElementById('clearConversationBtn')
         };
 
+        // 初始化应用
         document.addEventListener('DOMContentLoaded', function() {
             loadStateFromLocalStorage();
             
@@ -422,49 +239,60 @@
             window.addEventListener('beforeunload', saveStateToLocalStorage);
         });
         
+        // 事件监听器设置
         function setupEventListeners() {
             elements.deleteNodeBtn.addEventListener('click', deleteNode);
             elements.clearConversationBtn.addEventListener('click', clearConversation);
             document.getElementById('exportBtn').addEventListener('click', exportConversation);
             document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
             document.getElementById('importFile').addEventListener('change', importConversation);
-            document.getElementById('zoomInBtn').addEventListener('click', () => adjustZoom(0.1));
             document.getElementById('zoomOutBtn').addEventListener('click', () => adjustZoom(-0.1));
             document.getElementById('resetZoomBtn').addEventListener('click', resetZoom);
             elements.sendBtn.addEventListener('click', sendMessage);
             elements.userInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
             document.getElementById('testApiBtn').addEventListener('click', testApiConnection);
             
-            document.getElementById('apiUrl').addEventListener('change', saveStateToLocalStorage);
-            document.getElementById('apiKey').addEventListener('change', saveStateToLocalStorage);
-            document.getElementById('modelName').addEventListener('change', saveStateToLocalStorage);
+            // API设置变化时保存状态
+            // ['apiUrl', 'apiKey', 'modelName', 'temperature'].forEach(id => {
+            //    document.getElementById(id).addEventListener('change', saveStateToLocalStorage);
+            //});
             
-            elements.canvas.addEventListener('click', e => {
-                const nodeElement = e.target.closest('.node');
-                if (!nodeElement) return;
-                
-                const nodeId = nodeElement.id;
-                
-                if (e.target.classList.contains('reasoning-toggle')) {
-                    toggleReasoning(nodeId);
-                    return;
-                }
-                
-                if (e.target.classList.contains('resend-btn')) {
-                    resendMessage(nodeId);
-                    return;
-                }
-                
-                if (e.target.classList.contains('node-content') || 
-                    e.target.classList.contains('reasoning-content') ||
-                    e.target.classList.contains('final-answer')) {
-                    editNodeContent(nodeId);
-                } else {
-                    selectNode(nodeId);
-                }
-            });
+            // 节点事件委托
+            elements.canvas.addEventListener('click', handleNodeClick);
         }
         
+        // 节点点击事件处理
+        function handleNodeClick(e) {
+            const nodeElement = e.target.closest('.node');
+            if (!nodeElement) return;
+            
+            const nodeId = nodeElement.id;
+            
+            if (e.target.classList.contains('reasoning-toggle')) {
+                toggleReasoning(nodeId);
+                return;
+            }
+            
+            if (e.target.classList.contains('resend-btn')) {
+                resendMessage(nodeId);
+                return;
+            }
+            
+            if (e.target.classList.contains('copy-btn')) {
+                copyNodeContent(nodeId);
+                return;
+            }
+            
+            if (e.target.classList.contains('node-content') || 
+                e.target.classList.contains('reasoning-content') ||
+                e.target.classList.contains('final-answer')) {
+                editNodeContent(nodeId);
+            } else {
+                selectNode(nodeId);
+            }
+        }
+        
+        // 节点管理函数
         function createNode(role, content, x, y, isStart = false, reasoning = null) {
             const id = 'node_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
             
@@ -531,6 +359,7 @@
             alert('对话已清空，只保留系统提示消息。');
         }
         
+        // 消息发送和API调用
         async function sendMessage() {
             const userInput = elements.userInput.value.trim();
             if (!userInput) {
@@ -546,6 +375,7 @@
             const apiUrl = document.getElementById('apiUrl').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
             const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             
             if (!apiUrl || !apiKey) {
                 alert('请设置API地址和API密钥');
@@ -585,7 +415,7 @@
                 renderAll();
                 scrollToNode(newAssistantNodeId);
                 
-                await callDeepseekAPIStream(apiUrl, apiKey, modelName, contextMessages, newAssistantNodeId);
+                await callDeepseekAPIStream(apiUrl, apiKey, modelName, temperature, contextMessages, newAssistantNodeId);
                 
             } catch (error) {
                 console.error('发送消息失败:', error);
@@ -608,6 +438,7 @@
             const apiUrl = document.getElementById('apiUrl').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
             const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             
             if (!apiUrl || !apiKey) {
                 alert('请设置API地址和API密钥');
@@ -631,7 +462,7 @@
             const contextMessages = getContextMessages(userNodeId);
             
             try {
-                await callDeepseekAPIStream(apiUrl, apiKey, modelName, contextMessages, newAssistantNodeId);
+                await callDeepseekAPIStream(apiUrl, apiKey, modelName, temperature, contextMessages, newAssistantNodeId);
                 saveStateToLocalStorage();
             } catch (error) {
                 console.error('重发消息失败:', error);
@@ -639,7 +470,7 @@
             }
         }
         
-        async function callDeepseekAPIStream(apiUrl, apiKey, modelName, messages, assistantNodeId) {
+        async function callDeepseekAPIStream(apiUrl, apiKey, modelName, temperature, messages, assistantNodeId) {
             const assistantNode = state.conversation.nodes[assistantNodeId];
             
             assistantNode.content = '';
@@ -658,7 +489,8 @@
                     body: JSON.stringify({
                         model: modelName,
                         messages,
-                        stream: true
+                        stream: true,
+                        temperature: temperature
                     })
                 });
                 
@@ -723,6 +555,7 @@
             const apiUrl = document.getElementById('apiUrl').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
             const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             
             if (!apiUrl || !apiKey) {
                 alert('请设置API地址和API密钥');
@@ -746,7 +579,8 @@
                             { role: 'system', content: '你是一个测试助手。' },
                             { role: 'user', content: '请回复"连接成功"以确认API连接正常。' }
                         ],
-                        stream: false
+                        stream: false,
+                        temperature: temperature
                     })
                 });
                 
@@ -769,6 +603,7 @@
             }
         }
         
+        // 渲染函数
         function renderAll() {
             renderNodes();
             renderConnections();
@@ -815,13 +650,23 @@
             roleIndicator.className = `role-indicator role-${node.role}`;
             roleIndicator.textContent = node.role.toUpperCase();
             
+            // 为用户节点添加重发按钮
             if (node.role === 'user') {
                 const resendBtn = document.createElement('button');
-                resendBtn.className = 'resend-btn';
+                resendBtn.className = 'resend-btn mt-1';
                 resendBtn.textContent = '↻';
                 resendBtn.title = '重发此消息';
+                resendBtn.dataset.nodeId = node.id;
                 element.appendChild(resendBtn);
             }
+            
+            // 为所有节点添加复制按钮
+            const copyBtn = document.createElement('button');
+            copyBtn.className = 'copy-btn mt-1';
+            copyBtn.textContent = '⎘';
+            copyBtn.title = '复制内容';
+            copyBtn.dataset.nodeId = node.id;
+            element.appendChild(copyBtn);
             
             const content = document.createElement('div');
             content.className = 'node-content';
@@ -829,7 +674,7 @@
             if (node.reasoning !== undefined && node.reasoning !== null) {
                 const reasoningToggle = document.createElement('div');
                 reasoningToggle.className = 'reasoning-toggle';
-                reasoningToggle.textContent = '↕ 推理过程';
+                reasoningToggle.textContent = '⇅ 推理过程';
                 reasoningToggle.dataset.nodeId = node.id;
                 
                 const reasoningContent = document.createElement('div');
@@ -843,23 +688,25 @@
                 }
                 
                 const finalAnswer = document.createElement('div');
-                finalAnswer.className = 'final-answer';
+                finalAnswer.className = 'final-answer markdown-body';
                 finalAnswer.style.marginTop = '8px';
                 
+                // 只在流式输出完成后渲染Markdown
                 if (node.content.includes('typing-indicator')) {
                     finalAnswer.innerHTML = node.content;
                 } else {
-                    finalAnswer.textContent = node.content;
+                    finalAnswer.innerHTML = marked.parse(node.content);
                 }
                 
                 content.appendChild(reasoningToggle);
                 content.appendChild(reasoningContent);
                 content.appendChild(finalAnswer);
             } else {
+                // 只在流式输出完成后渲染Markdown
                 if (node.content.includes('typing-indicator')) {
                     content.innerHTML = node.content;
                 } else {
-                    content.textContent = node.content;
+                    content.innerHTML = marked.parse(node.content);
                 }
             }
             
@@ -871,6 +718,26 @@
         
         function updateNodeElement(element, node) {
             const content = element.querySelector('.node-content');
+            
+            // 确保用户节点的重发按钮存在
+            if (node.role === 'user' && !element.querySelector('.resend-btn')) {
+                const resendBtn = document.createElement('button');
+                resendBtn.className = 'resend-btn';
+                resendBtn.textContent = '↻';
+                resendBtn.title = '重发此消息';
+                resendBtn.dataset.nodeId = node.id;
+                element.appendChild(resendBtn);
+            }
+            
+            // 确保复制按钮存在
+            if (!element.querySelector('.copy-btn')) {
+                const copyBtn = document.createElement('button');
+                copyBtn.className = 'copy-btn';
+                copyBtn.textContent = '⎘';
+                copyBtn.title = '复制内容';
+                copyBtn.dataset.nodeId = node.id;
+                element.appendChild(copyBtn);
+            }
             
             if (node.reasoning !== undefined && node.reasoning !== null) {
                 let reasoningToggle = content.querySelector('.reasoning-toggle');
@@ -890,7 +757,7 @@
                     reasoningContent.dataset.nodeId = node.id;
                     
                     finalAnswer = document.createElement('div');
-                    finalAnswer.className = 'final-answer';
+                    finalAnswer.className = 'final-answer markdown-body';
                     finalAnswer.style.marginTop = '8px';
                     
                     content.appendChild(reasoningToggle);
@@ -907,26 +774,18 @@
                 if (node.content.includes('typing-indicator')) {
                     finalAnswer.innerHTML = node.content;
                 } else {
-                    finalAnswer.textContent = node.content;
+                    finalAnswer.innerHTML = marked.parse(node.content);
                 }
             } else {
                 if (node.content.includes('typing-indicator')) {
                     content.innerHTML = node.content;
                 } else {
-                    content.textContent = node.content;
+                    content.innerHTML = marked.parse(node.content);
                 }
             }
             
             element.style.left = node.position.x + 'px';
             element.style.top = node.position.y + 'px';
-            
-            if (node.role === 'user' && !element.querySelector('.resend-btn')) {
-                const resendBtn = document.createElement('button');
-                resendBtn.className = 'resend-btn';
-                resendBtn.textContent = '↻';
-                resendBtn.title = '重发此消息';
-                element.appendChild(resendBtn);
-            }
         }
         
         function renderConnections() {
@@ -1016,6 +875,7 @@
             return li;
         }
         
+        // 工具函数
         function calculateNodePosition(parentNode, nodeType) {
             const parentPos = parentNode.position;
             
@@ -1161,6 +1021,65 @@
             reasoningContent.classList.toggle('reasoning-collapsed');
         }
         
+        function copyNodeContent(nodeId) {
+            const node = state.conversation.nodes[nodeId];
+            if (!node) return;
+            
+            // 对于助手节点，只复制最终答案（不包含推理过程）
+            let textToCopy = node.content;
+            
+            // 如果节点内容包含Markdown，我们需要获取纯文本
+            // 创建一个临时元素来提取文本
+            const tempElement = document.createElement('div');
+            if (node.reasoning !== undefined && node.reasoning !== null) {
+                // 对于有推理过程的助手节点，只复制最终答案
+                tempElement.innerHTML = node.content;
+            } else {
+                tempElement.innerHTML = node.content;
+            }
+            
+            // 获取纯文本
+            textToCopy = tempElement.textContent || tempElement.innerText || '';
+            
+            // 使用Clipboard API复制文本
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                // 显示复制成功提示
+                showCopySuccess(nodeId);
+            }).catch(err => {
+                console.error('复制失败:', err);
+                // 如果Clipboard API不可用，使用备用方法
+                const textArea = document.createElement('textarea');
+                textArea.value = textToCopy;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+                showCopySuccess(nodeId);
+            });
+        }
+        
+        function showCopySuccess(nodeId) {
+            const nodeElement = document.getElementById(nodeId);
+            if (!nodeElement) return;
+            
+            // 检查是否已存在成功提示
+            let successElement = nodeElement.querySelector('.copy-success');
+            if (!successElement) {
+                successElement = document.createElement('div');
+                successElement.className = 'copy-success mt-1';
+                successElement.textContent = '复制成功';
+                nodeElement.appendChild(successElement);
+            }
+            
+            // 显示成功提示
+            successElement.classList.add('show');
+            
+            // 2秒后隐藏成功提示
+            setTimeout(() => {
+                successElement.classList.remove('show');
+            }, 2000);
+        }
+        
         function makeDraggable(element, node) {
             element.addEventListener('mousedown', startDrag);
             
@@ -1169,7 +1088,8 @@
                     e.target.classList.contains('reasoning-content') ||
                     e.target.classList.contains('final-answer') ||
                     e.target.classList.contains('reasoning-toggle') ||
-                    e.target.classList.contains('resend-btn')) return;
+                    e.target.classList.contains('resend-btn') ||
+                    e.target.classList.contains('copy-btn')) return;
                 
                 state.isDragging = true;
                 state.dragStart.x = e.clientX;
@@ -1236,6 +1156,7 @@
             renderConnections();
         }
         
+        // 数据持久化
         function saveStateToLocalStorage() {
             try {
                 const stateToSave = {
@@ -1245,7 +1166,8 @@
                     apiSettings: {
                         apiUrl: document.getElementById('apiUrl').value,
                         apiKey: document.getElementById('apiKey').value,
-                        modelName: document.getElementById('modelName').value
+                        modelName: document.getElementById('modelName').value,
+                        temperature: document.getElementById('temperature').value
                     }
                 };
                 
@@ -1278,6 +1200,7 @@
                         document.getElementById('apiUrl').value = parsedState.apiSettings.apiUrl || 'https://api.deepseek.com/chat/completions';
                         document.getElementById('apiKey').value = parsedState.apiSettings.apiKey || '';
                         document.getElementById('modelName').value = parsedState.apiSettings.modelName || 'deepseek-chat';
+                        document.getElementById('temperature').value = parsedState.apiSettings.temperature || '1.0';
                     }
                 }
             } catch (error) {
