@@ -36,7 +36,7 @@
         .connections { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
         .tree-view { list-style-type: none; padding-left: 0; min-width: 200px; overflow-x: auto; }
         .tree-view ul { list-style-type: none; padding-left: 20px; }
-        .tree-node { padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; min-width: 200px; font-size: .875em; }
+        .tree-node { padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; min-width: 200px; font-size: .75em; }
         .tree-node:hover { background-color: #495057; }
         .tree-node.selected { background-color: #007bff; }
         .zoom-controls, .toolbar { position: absolute; top: 20px; z-index: 100; }
@@ -200,19 +200,19 @@
                                     <div class="accordion-body p-3">
                                         <div class="form-group">
                                             <label for="apiUrl" class="form-label small">API地址</label>
-                                            <input type="text" class="form-control form-control-sm" id="apiUrl" value="https://api.deepseek.com/chat/completions">
+                                            <input type="text" class="form-control form-control-sm" id="apiUrl" value="https://api.deepseek.com/chat/completions" autocomplete="off">
                                         </div>
                                         <div class="form-group mt-2">
                                             <label for="apiKey" class="form-label small">API密钥</label>
-                                            <input type="password" class="form-control form-control-sm" id="apiKey" placeholder="输入API密钥">
+                                            <input type="password" class="form-control form-control-sm" id="apiKey" placeholder="输入API密钥" autocomplete="off">
                                         </div>
                                         <div class="form-group mt-2">
                                             <label for="modelName" class="form-label small">模型名称</label>
-                                            <input type="text" class="form-control form-control-sm" id="modelName" value="deepseek-chat" placeholder="输入模型名称">
+                                            <input type="text" class="form-control form-control-sm" id="modelName" value="deepseek-chat" placeholder="输入模型名称" autocomplete="off">
                                         </div>
                                         <div class="form-group mt-2">
                                             <label for="temperature" class="form-label small">温度<small> (0.1-2.0)</small></label>
-                                            <input type="number" class="form-control form-control-sm" id="temperature" min="0" max="2" step="0.1" value="1.0">
+                                            <input type="number" class="form-control form-control-sm" id="temperature" min="0" max="2" step="0.1" value="1.0" autocomplete="off">
                                         </div>
                                         <button class="btn btn-outline-dark btn-sm w-100 mt-3" id="testApiBtn">测试连接</button>
                                     </div>
@@ -256,7 +256,7 @@
                         <button class="btn btn-primary" id="sendBtn">发送</button>
                     </div>
                     <small class="form-text text-muted mt-2">
-                        节点数量: <span id="contextInfo">1</span>
+                        选中节点: <span id="contextInfo">1</span>
                     </small>
                 </div>
             </div>
