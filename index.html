@@ -843,13 +843,11 @@
                 
                 parentNode.branches.push({
                     id: 'branch_' + Date.now(),
-                    text: userInput.substring(0, 30) + (userInput.length > 30 ? '...' : ''),
                     nextNodeId: newUserNodeId
                 });
                 
                 state.conversation.nodes[newUserNodeId].branches.push({
                     id: 'branch_' + Date.now(),
-                    text: i18n('assistantReply'),
                     nextNodeId: newAssistantNodeId
                 });
                 
@@ -894,7 +892,6 @@
             
             userNode.branches.push({
                 id: 'branch_' + Date.now(),
-                text: i18n('assistantReply'),
                 nextNodeId: newAssistantNodeId
             });
             
@@ -1647,6 +1644,8 @@
             const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
             
             const exportData = {
+                version: "1.1",
+                exportTime: now.toISOString(),
                 title: `VibeChat_${timestamp}`,
                 nodes: {},
                 startNode: state.conversation.startNode
@@ -1658,7 +1657,14 @@
                     role: node.role,
                     content: node.content,
                     reasoning: node.reasoning,
-                    branches: node.branches
+                    branches: node.branches.map(branch => ({
+                        id: branch.id,
+                        nextNodeId: branch.nextNodeId
+                    })),
+                    position: {
+                        x: node.position.x,
+                        y: node.position.y
+                    }
                 };
             });
             
@@ -1680,35 +1686,57 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     
-                    if (importedData.nodes && importedData.startNode) {
-                        state.conversation = {
-                            title: importedData.title || 'VibeChat',
-                            nodes: {},
-                            startNode: importedData.startNode
-                        };
-                        
-                        Object.values(importedData.nodes).forEach(node => {
-                            state.conversation.nodes[node.id] = {
-                                id: node.id,
-                                role: node.role || 'user',
-                                content: node.content,
-                                reasoning: node.reasoning,
-                                branches: node.branches,
-                                position: { x: 0, y: 0 }
-                            };
-                        });
-                        
-                        autoArrangeNodes();
-                        state.selectedNodeId = null;
-                        renderAll();
-                        saveStateToLocalStorage();
-                        
-                        alert(i18n('importSuccess'));
-                    } else {
+                    // 检查数据格式
+                    if (!importedData.nodes || !importedData.startNode) {
                         alert(i18n('invalidFormat'));
+                        return;
                     }
+                    
+                    // 重置对话状态
+                    state.conversation = {
+                        title: importedData.title || 'VibeChat',
+                        nodes: {},
+                        startNode: importedData.startNode
+                    };
+                    
+                    Object.values(importedData.nodes).forEach(node => {
+                        const branches = node.branches || [];
+                        
+                        const normalizedBranches = branches.map(branch => ({
+                            id: branch.id || 'branch_' + Date.now() + '_' + Math.random().toString(36).substr(2, 5),
+                            nextNodeId: branch.nextNodeId
+                        }));
+                        
+                        // 处理位置信息：如果旧数据没有位置信息，使用默认值
+                        const position = node.position || { x: 0, y: 0 };
+                        
+                        state.conversation.nodes[node.id] = {
+                            id: node.id,
+                            role: node.role || 'user',
+                            content: node.content || '',
+                            reasoning: node.reasoning || null,
+                            branches: normalizedBranches,
+                            position: position
+                        };
+                    });
+                    
+                    // 检查是否需要重新排列节点（旧版本数据可能没有位置信息）
+                    const needsAutoArrange = Object.values(state.conversation.nodes).some(node => 
+                        node.position.x === 0 && node.position.y === 0
+                    );
+                    
+                    if (needsAutoArrange) {
+                        autoArrangeNodes();
+                    }
+                    
+                    state.selectedNodeId = null;
+                    renderAll();
+                    saveStateToLocalStorage();
+                    
+                    alert(i18n('importSuccess'));
                 } catch (error) {
                     alert(i18n('importFailed') + error.message);
+                    console.error('Import error:', error);
                 }
                 
                 event.target.value = '';
