@@ -1312,7 +1312,8 @@
                 });
                 treeNode.appendChild(toggle);
             }
-            
+
+            const roleBadge = document.createElement('span');
             roleBadge.className = `badge ${node.role === 'system' ? 'bg-success' : node.role === 'user' ? 'bg-primary' : 'bg-info'} me-1`;
             roleBadge.textContent = node.role.substring(0, 1).toUpperCase();
             
