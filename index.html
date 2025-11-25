@@ -45,7 +45,10 @@
             padding: 0;
             transition: background-color 0.3s, color 0.3s;
         }
+
+        .badge.bg-info { background-color: var(--info-color) !important; }
         
+
         .vibe-font { font-family: 'Doto', sans-serif; font-weight: 300; }
         .container-fluid { height: 100vh; padding: 0; }
         .sidebar { background-color: var(--sidebar-bg); color: white; height: 100vh; overflow-y: auto; }
@@ -109,6 +112,13 @@
         .node-content table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; }
         .node-content table th, .node-content table td { border: 1px solid var(--border-color); padding: 0.3em 0.5em; text-align: left; }
         .node-content table th { background-color: var(--bg-color); font-weight: 600; }
+        
+        /* 树形视图折叠样式 */
+        .tree-node.has-children { position: relative; }
+        .tree-toggle { position: absolute; left: -15px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; cursor: pointer; color: #adb5bd; font-size: 10px; display: flex; align-items: center; justify-content: center; }
+        .tree-toggle:hover { color: white; }
+        .tree-children { transition: max-height 0.3s ease; overflow: hidden; }
+        .tree-children.collapsed { max-height: 0; }
         
         /* 移动端优化 */
         .mobile-sidebar-toggle {
@@ -321,7 +331,8 @@
             zoomLevel: 1,
             isDragging: false,
             dragStart: { x: 0, y: 0 },
-            isMobile: window.innerWidth <= 768
+            isMobile: window.innerWidth <= 768,
+            treeCollapsedNodes: new Set()
         };
         
         // DOM 元素引用
@@ -1285,8 +1296,23 @@
             
             const treeNode = document.createElement('div');
             treeNode.className = 'tree-node';
+            if (node.branches.length > 0) {
+                treeNode.classList.add('has-children');
+            }
             
-            const roleBadge = document.createElement('span');
+            // 添加折叠/展开按钮
+            if (node.branches.length > 0) {
+                const toggle = document.createElement('span');
+                toggle.className = 'tree-toggle';
+                toggle.innerHTML = state.treeCollapsedNodes.has(nodeId) ? '▶' : '▼';
+                toggle.dataset.nodeId = nodeId;
+                toggle.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    toggleTreeNode(nodeId);
+                });
+                treeNode.appendChild(toggle);
+            }
+            
             roleBadge.className = `badge ${node.role === 'system' ? 'bg-success' : node.role === 'user' ? 'bg-primary' : 'bg-info'} me-1`;
             roleBadge.textContent = node.role.substring(0, 1).toUpperCase();
             
@@ -1308,6 +1334,10 @@
             
             if (node.branches.length > 0) {
                 const childList = document.createElement('ul');
+                childList.className = 'tree-children';
+                if (state.treeCollapsedNodes.has(nodeId)) {
+                    childList.classList.add('collapsed');
+                }
                 
                 node.branches.forEach(branch => {
                     const childNode = createTreeNode(branch.nextNodeId);
@@ -1318,6 +1348,16 @@
             }
             
             return li;
+        }
+        
+        // 树节点折叠/展开功能
+        function toggleTreeNode(nodeId) {
+            if (state.treeCollapsedNodes.has(nodeId)) {
+                state.treeCollapsedNodes.delete(nodeId);
+            } else {
+                state.treeCollapsedNodes.add(nodeId);
+            }
+            renderTreeView();
         }
         
         // 工具函数
