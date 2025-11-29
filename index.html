@@ -120,6 +120,24 @@
         .tree-children { transition: max-height 0.3s ease; overflow: hidden; }
         .tree-children.collapsed { max-height: 0; }
         
+        /* 对话管理样式 */
+        .conversations-list { max-height: 300px; overflow-y: auto; margin-bottom: 15px; }
+        .conversation-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 4px; margin-bottom: 5px; background-color: rgba(255, 255, 255, 0.1); }
+        .conversation-item:hover { background-color: rgba(255, 255, 255, 0.15); }
+        .conversation-item.active { background-color: var(--primary-color); }
+        .conversation-title { flex-grow: 1; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .conversation-actions { display: flex; gap: 5px; }
+        .conversation-actions button { padding: 2px 6px; font-size: 12px; }
+        
+        /* Tab样式优化 */
+        .sidebar .nav-tabs { border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
+        .sidebar .nav-tabs .nav-link { color: white; border: none; }
+        .sidebar .nav-tabs .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
+        .sidebar .nav-tabs .nav-link.active { background-color: white; color: black; }
+        
+        /* 按钮样式优化 */
+        .btn-group-sm .btn { font-size: 0.75rem; }
+        
         /* 移动端优化 */
         .mobile-sidebar-toggle {
             display: none;
@@ -217,13 +235,9 @@
             <div class="col-md-3 sidebar" id="sidebar">
                 <div class="p-3">
                     <h3 class="mb-3 vibe-font">VibeChat<sup><a href="https://github.com/DreamBlooms/VibeChat" target="_blank" class="text-white" style="text-decoration:none;">(a)</a></sup></h3>
-                    <div class="d-flex mb-2">
-                        <button class="btn btn-outline-light btn-sm m-1 flex-fill" id="exportBtn" data-i18n="exportBtn">导出</button>
-                        <button class="btn btn-outline-light btn-sm m-1 flex-fill" id="importBtn" data-i18n="importBtn">导入</button>
-                    </div>
-                    <input type="file" id="importFile" style="display: none;" accept=".json">
                     
-                    <div class="api-settings">
+                    <!-- API设置 -->
+                    <div class="api-settings mb-3">
                         <div class="accordion" id="apiSettingsAccordion">
                             <div class="accordion-item border-0">
                                 <h2 class="accordion-header" id="apiSettingsHeading">
@@ -256,9 +270,39 @@
                         </div>
                     </div>
                     
-                    <hr class="bg-light">
-                    <div id="treeViewContainer">
-                        <ul class="tree-view" id="treeView"></ul>
+                    <!-- Tab切换 -->
+                    <ul class="nav nav-tabs mb-3 px-1" id="sidebarTabs" role="tablist">
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations" type="button" role="tab" aria-controls="conversations" aria-selected="false">对话管理</button>
+                        </li>
+                        <li class="nav-item" role="presentation">
+                            <button class="nav-link active" id="treeview-tab" data-bs-toggle="tab" data-bs-target="#treeview" type="button" role="tab" aria-controls="treeview" aria-selected="true">对话树</button>
+                        </li>
+                    </ul>
+                    
+                    <div class="tab-content" id="sidebarTabsContent">
+                        <!-- 对话管理Tab -->
+                        <div class="tab-pane fade" id="conversations" role="tabpanel" aria-labelledby="conversations-tab">
+                            <div class="d-flex mb-3 px-1">
+                                <button class="btn btn-outline-light btn-sm flex-fill me-1" id="newConversationBtn">新建</button>
+                                <button class="btn btn-outline-light btn-sm flex-fill me-1" id="exportBtn" data-i18n="exportBtn">导出</button>
+                                <button class="btn btn-outline-light btn-sm flex-fill" id="importBtn" data-i18n="importBtn">导入</button>
+                            </div>
+                            <input type="file" id="importFile" style="display: none;" accept=".json">
+                            
+                            <hr class="bg-light">
+                            
+                            <div class="conversations-list" id="conversationsList">
+                                <!-- 对话列表将在这里动态生成 -->
+                            </div>
+                        </div>
+                        
+                        <!-- 对话树Tab -->
+                        <div class="tab-pane fade show active" id="treeview" role="tabpanel" aria-labelledby="treeview-tab">
+                            <div id="treeViewContainer">
+                                <ul class="tree-view" id="treeView"></ul>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -322,17 +366,11 @@
         
         // 应用状态
         const state = {
-            conversation: {
-                title: "VibeChat",
-                nodes: {},
-                startNode: null
-            },
-            selectedNodeId: null,
-            zoomLevel: 1,
+            conversations: {}, // 存储所有对话 {id: {title, nodes, startNode, selectedNodeId, zoomLevel, treeCollapsedNodes}}
+            currentConversationId: null,
             isDragging: false,
             dragStart: { x: 0, y: 0 },
-            isMobile: window.innerWidth <= 768,
-            treeCollapsedNodes: new Set()
+            isMobile: window.innerWidth <= 768
         };
         
         // DOM 元素引用
@@ -348,7 +386,9 @@
             sidebar: document.getElementById('sidebar'),
             mobileSidebarToggle: document.getElementById('mobileSidebarToggle'),
             sidebarBackdrop: document.getElementById('sidebarBackdrop'),
-            themeToggle: document.getElementById('themeToggle')
+            themeToggle: document.getElementById('themeToggle'),
+            conversationsList: document.getElementById('conversationsList'),
+            newConversationBtn: document.getElementById('newConversationBtn')
         };
 
         // 多语言资源
@@ -399,7 +439,17 @@
                 sending: '发送中...',
                 testing: '测试中...',
                 editFinalAnswer: '编辑节点最终回答:',
-                editNodeContent: '编辑节点内容:'
+                editNodeContent: '编辑节点内容:',
+                newConversation: '新建对话',
+                renameConversation: '重命名',
+                deleteConversation: '删除',
+                switchConversation: '切换对话',
+                confirmDeleteConversation: '确定要删除这个对话吗？此操作无法撤销。',
+                enterConversationTitle: '请输入对话标题',
+                defaultConversationTitle: '新对话',
+                sendFailed: '发送失败：',
+                resendFailed: '重发失败：',
+                apiFailed: 'API连接失败：'
             },
             'zh-TW': {
                 pageTitle: 'VibeChat(α) | 多分支 LLM 網頁聊天',
@@ -447,7 +497,17 @@
                 sending: '發送中...',
                 testing: '測試中...',
                 editFinalAnswer: '編輯節點最終回答:',
-                editNodeContent: '編輯節點內容:'
+                editNodeContent: '編輯節點內容:',
+                newConversation: '新建對話',
+                renameConversation: '重命名',
+                deleteConversation: '刪除',
+                switchConversation: '切換對話',
+                confirmDeleteConversation: '確定要刪除這個對話嗎？此操作無法撤銷。',
+                enterConversationTitle: '請輸入對話標題',
+                defaultConversationTitle: '新對話',
+                sendFailed: '發送失敗：',
+                resendFailed: '重發失敗：',
+                apiFailed: 'API連接失敗：'
             },
             'en': {
                 pageTitle: 'VibeChat(α) | Multi-branch LLM WebChat',
@@ -495,7 +555,17 @@
                 sending: 'Sending...',
                 testing: 'Testing...',
                 editFinalAnswer: 'Edit node final answer:',
-                editNodeContent: 'Edit node content:'
+                editNodeContent: 'Edit node content:',
+                newConversation: 'New Conversation',
+                renameConversation: 'Rename',
+                deleteConversation: 'Delete',
+                switchConversation: 'Switch Conversation',
+                confirmDeleteConversation: 'Are you sure you want to delete this conversation? This action cannot be undone.',
+                enterConversationTitle: 'Please enter conversation title',
+                defaultConversationTitle: 'New Conversation',
+                sendFailed: 'Send failed:',
+                resendFailed: 'Resend failed:',
+                apiFailed: 'API connection failed:'
             },
             'ja': {
                 pageTitle: 'VibeChat(α) | マルチブランチ LLM ウェブチャット',
@@ -543,7 +613,17 @@
                 sending: '送信中...',
                 testing: 'テスト中...',
                 editFinalAnswer: 'ノードの最終回答を編集:',
-                editNodeContent: 'ノードの内容を編集:'
+                editNodeContent: 'ノードの内容を編集:',
+                newConversation: '新規会話',
+                renameConversation: '名前変更',
+                deleteConversation: '削除',
+                switchConversation: '会話切替',
+                confirmDeleteConversation: 'この会話を削除してもよろしいですか？この操作は元に戻せません。',
+                enterConversationTitle: '会話タイトルを入力してください',
+                defaultConversationTitle: '新規会話',
+                sendFailed: '送信失敗：',
+                resendFailed: '再送信失敗：',
+                apiFailed: 'API接続失敗：'
             }
         };
 
@@ -560,9 +640,9 @@
             
             loadStateFromLocalStorage();
             
-            if (!state.conversation.startNode || Object.keys(state.conversation.nodes).length === 0) {
-                const initialX = (5000 - CONSTANTS.NODE_WIDTH) / 2;
-                createNode("system", i18n('systemPrompt'), initialX, 200, true);
+            // 如果没有当前对话，创建一个
+            if (!state.currentConversationId || !state.conversations[state.currentConversationId]) {
+                createNewConversation();
             }
             
             setupEventListeners();
@@ -570,8 +650,8 @@
             renderAll();
             
             const container = document.getElementById('canvasContainer');
-            if (state.selectedNodeId) {
-                scrollToNode(state.selectedNodeId);
+            if (getCurrentConversation().selectedNodeId) {
+                scrollToNode(getCurrentConversation().selectedNodeId);
             } else {
                 container.scrollTo(2500 - container.clientWidth / 2, 0);
             }
@@ -579,6 +659,11 @@
             window.addEventListener('beforeunload', saveStateToLocalStorage);
             window.addEventListener('resize', handleResize);
         });
+        
+        // 获取当前对话
+        function getCurrentConversation() {
+            return state.conversations[state.currentConversationId];
+        }
         
         // 初始化语言
         function initLanguage() {
@@ -711,6 +796,7 @@
             elements.userInput.addEventListener('keypress', e => e.key === 'Enter' && sendMessage());
             document.getElementById('testApiBtn').addEventListener('click', testApiConnection);
             elements.themeToggle.addEventListener('click', toggleTheme);
+            elements.newConversationBtn.addEventListener('click', createNewConversation);
             
             // 节点事件委托
             elements.canvas.addEventListener('click', handleNodeClick);
@@ -747,13 +833,133 @@
             }
         }
         
+        // 对话管理函数
+        function createNewConversation() {
+            const conversationId = 'conversation_' + Date.now();
+            const now = new Date();
+            const timeString = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+            const title = `新对话_${timeString}`;
+            
+            state.conversations[conversationId] = {
+                title,
+                nodes: {},
+                startNode: null,
+                selectedNodeId: null,
+                zoomLevel: 1,
+                treeCollapsedNodes: new Set()
+            };
+            
+            state.currentConversationId = conversationId;
+            
+            // 创建初始系统节点
+            const initialX = (5000 - CONSTANTS.NODE_WIDTH) / 2;
+            createNode("system", i18n('systemPrompt'), initialX, 200, true);
+            
+            renderConversationsList();
+            renderAll();
+            saveStateToLocalStorage();
+        }
+        
+        function switchConversation(conversationId) {
+            if (state.conversations[conversationId]) {
+                state.currentConversationId = conversationId;
+                renderConversationsList();
+                renderAll();
+                saveStateToLocalStorage();
+            }
+        }
+        
+        function renameConversation(conversationId) {
+            const conversation = state.conversations[conversationId];
+            if (!conversation) return;
+            
+            const newTitle = prompt(i18n('enterConversationTitle'), conversation.title);
+            if (newTitle && newTitle.trim() !== '') {
+                conversation.title = newTitle.trim();
+                renderConversationsList();
+                saveStateToLocalStorage();
+            }
+        }
+        
+        function deleteConversation(conversationId) {
+            if (Object.keys(state.conversations).length <= 1) {
+                alert('不能删除最后一个对话');
+                return;
+            }
+            
+            if (!confirm(i18n('confirmDeleteConversation'))) return;
+            
+            delete state.conversations[conversationId];
+            
+            // 如果删除的是当前对话，切换到另一个对话
+            if (state.currentConversationId === conversationId) {
+                const remainingIds = Object.keys(state.conversations);
+                if (remainingIds.length > 0) {
+                    state.currentConversationId = remainingIds[0];
+                } else {
+                    createNewConversation();
+                }
+            }
+            
+            renderConversationsList();
+            renderAll();
+            saveStateToLocalStorage();
+        }
+        
+        function renderConversationsList() {
+            const conversationsList = elements.conversationsList;
+            conversationsList.innerHTML = '';
+            
+            Object.keys(state.conversations).forEach(conversationId => {
+                const conversation = state.conversations[conversationId];
+                
+                const conversationItem = document.createElement('div');
+                conversationItem.className = `conversation-item ${conversationId === state.currentConversationId ? 'active' : ''}`;
+                
+                const titleElement = document.createElement('div');
+                titleElement.className = 'conversation-title';
+                titleElement.textContent = conversation.title;
+                titleElement.addEventListener('click', () => switchConversation(conversationId));
+                
+                const actionsElement = document.createElement('div');
+                actionsElement.className = 'conversation-actions';
+                
+                const renameBtn = document.createElement('button');
+                renameBtn.className = 'btn btn-outline-light btn-sm';
+                renameBtn.textContent = '✎';
+                renameBtn.title = i18n('renameConversation');
+                renameBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    renameConversation(conversationId);
+                });
+                
+                const deleteBtn = document.createElement('button');
+                deleteBtn.className = 'btn btn-outline-light btn-sm';
+                deleteBtn.textContent = '×';
+                deleteBtn.title = i18n('deleteConversation');
+                deleteBtn.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    deleteConversation(conversationId);
+                });
+                
+                actionsElement.appendChild(renameBtn);
+                actionsElement.appendChild(deleteBtn);
+                
+                conversationItem.appendChild(titleElement);
+                conversationItem.appendChild(actionsElement);
+                
+                conversationsList.appendChild(conversationItem);
+            });
+        }
+        
         // 节点管理函数
         function createNode(role, content, x, y, isStart = false, reasoning = null) {
+            const conversation = getCurrentConversation();
             const timestamp = Date.now();
             const randomStr = Math.random().toString(36).substr(2, 9);
             const id = `node_${role}_${timestamp}_${randomStr}`;
             
-            state.conversation.nodes[id] = {
+            conversation.nodes[id] = {
                 id,
                 role,
                 content,
@@ -763,52 +969,55 @@
             };
             
             if (isStart) {
-                state.conversation.startNode = id;
-                state.selectedNodeId = id;
+                conversation.startNode = id;
+                conversation.selectedNodeId = id;
             }
             
             return id;
         }
         
         function deleteNode() {
-            if (!state.selectedNodeId || state.selectedNodeId === state.conversation.startNode) {
+            const conversation = getCurrentConversation();
+            if (!conversation.selectedNodeId || conversation.selectedNodeId === conversation.startNode) {
                 alert(i18n('cannotDeleteStart'));
                 return;
             }
             
             if (!confirm(i18n('confirmDelete'))) return;
             
-            deleteNodeAndChildren(state.selectedNodeId);
-            state.selectedNodeId = null;
+            deleteNodeAndChildren(conversation.selectedNodeId);
+            conversation.selectedNodeId = null;
             renderAll();
             saveStateToLocalStorage();
         }
         
         function deleteNodeAndChildren(nodeId) {
-            if (!state.conversation.nodes[nodeId]) return;
+            const conversation = getCurrentConversation();
+            if (!conversation.nodes[nodeId]) return;
             
-            state.conversation.nodes[nodeId].branches.forEach(branch => {
+            conversation.nodes[nodeId].branches.forEach(branch => {
                 deleteNodeAndChildren(branch.nextNodeId);
             });
             
-            Object.values(state.conversation.nodes).forEach(node => {
+            Object.values(conversation.nodes).forEach(node => {
                 node.branches = node.branches.filter(branch => branch.nextNodeId !== nodeId);
             });
             
-            delete state.conversation.nodes[nodeId];
+            delete conversation.nodes[nodeId];
         }
         
         function clearConversation() {
             if (!confirm(i18n('confirmClear'))) return;
             if (!confirm(i18n('confirmClearAgain'))) return;
             
-            const systemNode = state.conversation.nodes[state.conversation.startNode];
+            const conversation = getCurrentConversation();
+            const systemNode = conversation.nodes[conversation.startNode];
             if (!systemNode) return;
             
-            state.conversation.nodes = {};
-            state.conversation.nodes[state.conversation.startNode] = systemNode;
+            conversation.nodes = {};
+            conversation.nodes[conversation.startNode] = systemNode;
             systemNode.branches = [];
-            state.selectedNodeId = state.conversation.startNode;
+            conversation.selectedNodeId = conversation.startNode;
             
             renderAll();
             saveStateToLocalStorage();
@@ -824,7 +1033,8 @@
                 return;
             }
             
-            if (!state.selectedNodeId) {
+            const conversation = getCurrentConversation();
+            if (!conversation.selectedNodeId) {
                 alert(i18n('selectNode'));
                 return;
             }
@@ -844,14 +1054,14 @@
             elements.sendBtn.textContent = i18n('sending');
             
             try {
-                const contextMessages = getContextMessages(state.selectedNodeId);
+                const contextMessages = getContextMessages(conversation.selectedNodeId);
                 contextMessages.push({ role: 'user', content: userInput });
                 
-                const parentNode = state.conversation.nodes[state.selectedNodeId];
+                const parentNode = conversation.nodes[conversation.selectedNodeId];
                 const userNodePos = calculateNodePosition(parentNode, 'user');
                 const newUserNodeId = createNode("user", userInput, userNodePos.x, userNodePos.y);
                 
-                const assistantNodePos = calculateNodePosition(state.conversation.nodes[newUserNodeId], 'assistant');
+                const assistantNodePos = calculateNodePosition(conversation.nodes[newUserNodeId], 'assistant');
                 const newAssistantNodeId = createNode("assistant", "", assistantNodePos.x, assistantNodePos.y);
                 
                 parentNode.branches.push({
@@ -859,12 +1069,12 @@
                     nextNodeId: newUserNodeId
                 });
                 
-                state.conversation.nodes[newUserNodeId].branches.push({
+                conversation.nodes[newUserNodeId].branches.push({
                     id: 'branch_' + Date.now(),
                     nextNodeId: newAssistantNodeId
                 });
                 
-                state.selectedNodeId = newAssistantNodeId;
+                conversation.selectedNodeId = newAssistantNodeId;
                 elements.userInput.value = '';
                 
                 renderAll();
@@ -884,7 +1094,8 @@
         }
         
         async function resendMessage(userNodeId) {
-            const userNode = state.conversation.nodes[userNodeId];
+            const conversation = getCurrentConversation();
+            const userNode = conversation.nodes[userNodeId];
             if (!userNode || userNode.role !== 'user') {
                 alert(i18n('resendUserOnly'));
                 return;
@@ -908,7 +1119,7 @@
                 nextNodeId: newAssistantNodeId
             });
             
-            state.selectedNodeId = newAssistantNodeId;
+            conversation.selectedNodeId = newAssistantNodeId;
             
             renderAll();
             scrollToNode(newAssistantNodeId);
@@ -925,7 +1136,8 @@
         }
         
         async function callDeepseekAPIStream(apiUrl, apiKey, modelName, temperature, messages, assistantNodeId) {
-            const assistantNode = state.conversation.nodes[assistantNodeId];
+            const conversation = getCurrentConversation();
+            const assistantNode = conversation.nodes[assistantNodeId];
             
             assistantNode.content = '';
             assistantNode.reasoning = null;
@@ -1062,15 +1274,17 @@
             renderNodes();
             renderConnections();
             renderTreeView();
+            renderConversationsList();
             updateUI();
             updateContextInfo();
         }
         
         function renderNodes() {
+            const conversation = getCurrentConversation();
             const canvas = elements.canvas;
             const existingNodes = canvas.querySelectorAll('.node');
             const existingNodeIds = new Set(Array.from(existingNodes).map(node => node.id));
-            const currentNodeIds = new Set(Object.keys(state.conversation.nodes));
+            const currentNodeIds = new Set(Object.keys(conversation.nodes));
             
             // 删除不存在的节点
             existingNodes.forEach(node => {
@@ -1080,7 +1294,7 @@
             });
             
             // 创建或更新节点
-            Object.values(state.conversation.nodes).forEach(node => {
+            Object.values(conversation.nodes).forEach(node => {
                 let nodeElement = document.getElementById(node.id);
                 
                 if (!nodeElement) {
@@ -1245,18 +1459,20 @@
         }
         
         function renderConnections() {
+            const conversation = getCurrentConversation();
             const svg = elements.connections;
             svg.innerHTML = '';
             
-            Object.values(state.conversation.nodes).forEach(node => {
+            Object.values(conversation.nodes).forEach(node => {
                 node.branches.forEach(branch => {
-                    const targetNode = state.conversation.nodes[branch.nextNodeId];
+                    const targetNode = conversation.nodes[branch.nextNodeId];
                     if (targetNode) drawConnection(svg, node, targetNode);
                 });
             });
         }
         
         function drawConnection(svg, fromNode, toNode) {
+            const conversation = getCurrentConversation();
             const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
             
             const fromY = fromNode.position.y + CONSTANTS.NODE_HEIGHT[fromNode.role];
@@ -1267,7 +1483,7 @@
             const pathData = `M ${fromX} ${fromY} C ${fromX} ${fromY + 125}, ${toX} ${toY - 125}, ${toX} ${toY}`;
             path.setAttribute('d', pathData);
             
-            const pathToSelected = getPathToNode(state.conversation.startNode, state.selectedNodeId);
+            const pathToSelected = getPathToNode(conversation.startNode, conversation.selectedNodeId);
             const inPath = pathToSelected.includes(fromNode.id) && pathToSelected.includes(toNode.id);
             
             path.setAttribute('stroke', inPath ? 'var(--primary-color)' : '#6c757d');
@@ -1279,17 +1495,19 @@
         }
         
         function renderTreeView() {
+            const conversation = getCurrentConversation();
             const treeView = elements.treeView;
             treeView.innerHTML = '';
             
-            if (state.conversation.startNode) {
-                const treeNode = createTreeNode(state.conversation.startNode);
+            if (conversation.startNode) {
+                const treeNode = createTreeNode(conversation.startNode);
                 treeView.appendChild(treeNode);
             }
         }
         
         function createTreeNode(nodeId) {
-            const node = state.conversation.nodes[nodeId];
+            const conversation = getCurrentConversation();
+            const node = conversation.nodes[nodeId];
             if (!node) return null;
             
             const li = document.createElement('li');
@@ -1304,7 +1522,7 @@
             if (node.branches.length > 0) {
                 const toggle = document.createElement('span');
                 toggle.className = 'tree-toggle';
-                toggle.innerHTML = state.treeCollapsedNodes.has(nodeId) ? '▶' : '▼';
+                toggle.innerHTML = conversation.treeCollapsedNodes.has(nodeId) ? '▶' : '▼';
                 toggle.dataset.nodeId = nodeId;
                 toggle.addEventListener('click', function(e) {
                     e.stopPropagation();
@@ -1336,7 +1554,7 @@
             if (node.branches.length > 0) {
                 const childList = document.createElement('ul');
                 childList.className = 'tree-children';
-                if (state.treeCollapsedNodes.has(nodeId)) {
+                if (conversation.treeCollapsedNodes.has(nodeId)) {
                     childList.classList.add('collapsed');
                 }
                 
@@ -1353,19 +1571,21 @@
         
         // 树节点折叠/展开功能
         function toggleTreeNode(nodeId) {
-            if (state.treeCollapsedNodes.has(nodeId)) {
-                state.treeCollapsedNodes.delete(nodeId);
+            const conversation = getCurrentConversation();
+            if (conversation.treeCollapsedNodes.has(nodeId)) {
+                conversation.treeCollapsedNodes.delete(nodeId);
             } else {
-                state.treeCollapsedNodes.add(nodeId);
+                conversation.treeCollapsedNodes.add(nodeId);
             }
             renderTreeView();
         }
         
         // 工具函数
         function calculateNodePosition(parentNode, nodeType) {
+            const conversation = getCurrentConversation();
             const parentPos = parentNode.position;
             
-            const children = Object.values(state.conversation.nodes).filter(node => 
+            const children = Object.values(conversation.nodes).filter(node => 
                 parentNode.branches.some(branch => branch.nextNodeId === node.id)
             );
             
@@ -1387,10 +1607,11 @@
         }
         
         function isOverlapping(x, y, nodeType) {
+            const conversation = getCurrentConversation();
             const nodeWidth = CONSTANTS.NODE_WIDTH + 20;
             const nodeHeight = CONSTANTS.NODE_HEIGHT[nodeType];
             
-            return Object.values(state.conversation.nodes).some(node => {
+            return Object.values(conversation.nodes).some(node => {
                 const existingNodeHeight = CONSTANTS.NODE_HEIGHT[node.role];
                 
                 return (
@@ -1403,21 +1624,23 @@
         }
         
         function getContextMessages(nodeId) {
-            const path = getPathToNode(state.conversation.startNode, nodeId);
+            const conversation = getCurrentConversation();
+            const path = getPathToNode(conversation.startNode, nodeId);
             return path.map(id => {
-                const node = state.conversation.nodes[id];
+                const node = conversation.nodes[id];
                 return { role: node.role, content: node.content };
             });
         }
         
         function getPathToNode(startNodeId, targetNodeId, path = []) {
+            const conversation = getCurrentConversation();
             if (!startNodeId) return [];
             
             path.push(startNodeId);
             
             if (startNodeId === targetNodeId) return path;
             
-            const node = state.conversation.nodes[startNodeId];
+            const node = conversation.nodes[startNodeId];
             for (let branch of node.branches) {
                 const result = getPathToNode(branch.nextNodeId, targetNodeId, [...path]);
                 if (result.length > 0) return result;
@@ -1427,7 +1650,8 @@
         }
         
         function selectNode(nodeId) {
-            state.selectedNodeId = nodeId;
+            const conversation = getCurrentConversation();
+            conversation.selectedNodeId = nodeId;
             updateSelection();
             updateUI();
             updateContextInfo();
@@ -1436,15 +1660,16 @@
         }
         
         function updateSelection() {
-            const path = getPathToNode(state.conversation.startNode, state.selectedNodeId);
+            const conversation = getCurrentConversation();
+            const path = getPathToNode(conversation.startNode, conversation.selectedNodeId);
             
-            Object.values(state.conversation.nodes).forEach(node => {
+            Object.values(conversation.nodes).forEach(node => {
                 const element = document.getElementById(node.id);
                 if (!element) return;
                 
                 const inPath = path.includes(node.id);
                 
-                if (node.id === state.selectedNodeId) {
+                if (node.id === conversation.selectedNodeId) {
                     element.classList.add('selected');
                     element.classList.remove('muted');
                 } else if (inPath) {
@@ -1457,28 +1682,31 @@
             });
             
             document.querySelectorAll('.tree-node').forEach(treeNode => {
-                treeNode.classList.toggle('selected', treeNode.dataset.nodeId === state.selectedNodeId);
+                treeNode.classList.toggle('selected', treeNode.dataset.nodeId === conversation.selectedNodeId);
             });
         }
         
         function updateUI() {
-            const hasSelection = state.selectedNodeId !== null;
+            const conversation = getCurrentConversation();
+            const hasSelection = conversation.selectedNodeId !== null;
             elements.deleteNodeBtn.disabled = !hasSelection;
             elements.sendBtn.disabled = !hasSelection;
         }
         
         function updateContextInfo() {
-            if (!state.selectedNodeId) {
+            const conversation = getCurrentConversation();
+            if (!conversation.selectedNodeId) {
                 elements.contextInfo.textContent = '0';
                 return;
             }
             
-            const path = getPathToNode(state.conversation.startNode, state.selectedNodeId);
+            const path = getPathToNode(conversation.startNode, conversation.selectedNodeId);
             elements.contextInfo.textContent = path.length;
         }
         
         function editNodeContent(nodeId) {
-            const node = state.conversation.nodes[nodeId];
+            const conversation = getCurrentConversation();
+            const node = conversation.nodes[nodeId];
             
             if (node.reasoning !== undefined && node.reasoning !== null) {
                 const newContent = prompt(i18n('editFinalAnswer'), node.content);
@@ -1508,7 +1736,8 @@
         }
         
         function copyNodeContent(nodeId) {
-            const node = state.conversation.nodes[nodeId];
+            const conversation = getCurrentConversation();
+            const node = conversation.nodes[nodeId];
             if (!node) return;
             
             // 简化复制逻辑 - 直接复制内容
@@ -1604,28 +1833,31 @@
         }
         
         function scrollToNode(nodeId) {
+            const conversation = getCurrentConversation();
             const nodeElement = document.getElementById(nodeId);
             if (!nodeElement) return;
             
-            const node = state.conversation.nodes[nodeId];
+            const node = conversation.nodes[nodeId];
             const nodeX = node.position.x + CONSTANTS.NODE_WIDTH / 2;
             const nodeY = node.position.y + CONSTANTS.NODE_HEIGHT[node.role] / 2;
             const container = document.getElementById('canvasContainer');
             
-            const scrollX = nodeX * state.zoomLevel - container.clientWidth / 2;
-            const scrollY = nodeY * state.zoomLevel - container.clientHeight / 2;
+            const scrollX = nodeX * conversation.zoomLevel - container.clientWidth / 2;
+            const scrollY = nodeY * conversation.zoomLevel - container.clientHeight / 2;
             
             container.scrollTo(scrollX, scrollY);
         }
         
         function adjustZoom(delta) {
-            state.zoomLevel = Math.max(0.3, Math.min(3, state.zoomLevel + delta));
-            elements.canvas.style.transform = `scale(${state.zoomLevel})`;
+            const conversation = getCurrentConversation();
+            conversation.zoomLevel = Math.max(0.3, Math.min(3, conversation.zoomLevel + delta));
+            elements.canvas.style.transform = `scale(${conversation.zoomLevel})`;
             renderConnections();
         }
         
         function resetZoom() {
-            state.zoomLevel = 1;
+            const conversation = getCurrentConversation();
+            conversation.zoomLevel = 1;
             elements.canvas.style.transform = 'scale(1)';
             renderConnections();
         }
@@ -1633,16 +1865,26 @@
         // 数据持久化
         function saveStateToLocalStorage() {
             try {
+                // 创建一个深拷贝，将 Set 转换为数组以便序列化
+                const conversationsToSave = {};
+                Object.keys(state.conversations).forEach(conversationId => {
+                    const conversation = state.conversations[conversationId];
+                    conversationsToSave[conversationId] = {
+                        ...conversation,
+                        treeCollapsedNodes: Array.from(conversation.treeCollapsedNodes) // 转换为数组
+                    };
+                });
+                
                 const stateToSave = {
-                    conversation: state.conversation,
-                    selectedNodeId: state.selectedNodeId,
-                    zoomLevel: state.zoomLevel,
+                    conversations: conversationsToSave,
+                    currentConversationId: state.currentConversationId,
                     apiSettings: {
                         apiUrl: document.getElementById('apiUrl').value,
                         apiKey: document.getElementById('apiKey').value,
                         modelName: document.getElementById('modelName').value,
                         temperature: document.getElementById('temperature').value
-                    }
+                    },
+                    version: "2.0" // 标记为新版本
                 };
                 
                 localStorage.setItem('vibechat-state', JSON.stringify(stateToSave));
@@ -1657,17 +1899,40 @@
                 if (savedState) {
                     const parsedState = JSON.parse(savedState);
                     
-                    if (parsedState.conversation) {
-                        state.conversation = parsedState.conversation;
-                    }
-                    
-                    if (parsedState.selectedNodeId) {
-                        state.selectedNodeId = parsedState.selectedNodeId;
-                    }
-                    
-                    if (parsedState.zoomLevel) {
-                        state.zoomLevel = parsedState.zoomLevel;
-                        elements.canvas.style.transform = `scale(${state.zoomLevel})`;
+                    // 处理旧版本数据兼容性
+                    if (parsedState.version === "2.0") {
+                        // 新版本数据格式
+                        if (parsedState.conversations) {
+                            state.conversations = parsedState.conversations;
+                            
+                            // 确保 treeCollapsedNodes 是 Set 对象
+                            Object.keys(state.conversations).forEach(conversationId => {
+                                const conversation = state.conversations[conversationId];
+                                if (conversation.treeCollapsedNodes && !(conversation.treeCollapsedNodes instanceof Set)) {
+                                    // 如果它是数组，转换为 Set
+                                    if (Array.isArray(conversation.treeCollapsedNodes)) {
+                                        conversation.treeCollapsedNodes = new Set(conversation.treeCollapsedNodes);
+                                    } else {
+                                        // 否则创建新的空 Set
+                                        conversation.treeCollapsedNodes = new Set();
+                                    }
+                                } else if (!conversation.treeCollapsedNodes) {
+                                    conversation.treeCollapsedNodes = new Set();
+                                }
+                                
+                                if (!conversation.zoomLevel) {
+                                    conversation.zoomLevel = 1;
+                                }
+                            });
+                        }
+                        
+                        if (parsedState.currentConversationId) {
+                            state.currentConversationId = parsedState.currentConversationId;
+                        }
+                    } else {
+                        // 旧版本数据格式 - 转换为新格式
+                        console.log("检测到旧版本数据，正在转换...");
+                        convertOldState(parsedState);
                     }
                     
                     if (parsedState.apiSettings) {
@@ -1682,19 +1947,66 @@
             }
         }
         
+        // 转换旧版本数据到新格式
+        function convertOldState(oldState) {
+            const conversationId = 'conversation_' + Date.now();
+            const now = new Date();
+            const timeString = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+            const title = `旧对话_${timeString}`;
+            
+            state.conversations[conversationId] = {
+                title,
+                nodes: {},
+                startNode: null,
+                selectedNodeId: null,
+                zoomLevel: 1,
+                treeCollapsedNodes: new Set()
+            };
+            
+            const conversation = state.conversations[conversationId];
+            
+            // 转换对话数据
+            if (oldState.conversation) {
+                conversation.nodes = oldState.conversation.nodes || {};
+                conversation.startNode = oldState.conversation.startNode || null;
+                conversation.selectedNodeId = oldState.selectedNodeId || null;
+                
+                if (oldState.zoomLevel) {
+                    conversation.zoomLevel = oldState.zoomLevel;
+                }
+                
+                // 处理旧的 treeCollapsedNodes
+                if (oldState.treeCollapsedNodes) {
+                    if (oldState.treeCollapsedNodes instanceof Set) {
+                        conversation.treeCollapsedNodes = oldState.treeCollapsedNodes;
+                    } else if (Array.isArray(oldState.treeCollapsedNodes)) {
+                        conversation.treeCollapsedNodes = new Set(oldState.treeCollapsedNodes);
+                    } else if (typeof oldState.treeCollapsedNodes === 'object') {
+                        conversation.treeCollapsedNodes = new Set(Object.keys(oldState.treeCollapsedNodes));
+                    }
+                }
+            }
+            
+            state.currentConversationId = conversationId;
+            
+            // 保存转换后的状态
+            saveStateToLocalStorage();
+        }
+        
         function exportConversation() {
+            const conversation = getCurrentConversation();
             const now = new Date();
             const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
             
             const exportData = {
-                version: "1.1",
+                version: "2.0",
                 exportTime: now.toISOString(),
-                title: `VibeChat_${timestamp}`,
+                title: conversation.title,
                 nodes: {},
-                startNode: state.conversation.startNode
+                startNode: conversation.startNode
             };
             
-            Object.values(state.conversation.nodes).forEach(node => {
+            Object.values(conversation.nodes).forEach(node => {
                 exportData.nodes[node.id] = {
                     id: node.id,
                     role: node.role,
@@ -1716,7 +2028,7 @@
             
             const link = document.createElement('a');
             link.href = URL.createObjectURL(dataBlob);
-            link.download = `VibeChat_${timestamp}.json`;
+            link.download = `${conversation.title}_${timestamp}.json`;
             link.click();
         }
         
@@ -1735,12 +2047,19 @@
                         return;
                     }
                     
-                    // 重置对话状态
-                    state.conversation = {
-                        title: importedData.title || 'VibeChat',
+                    const conversationId = 'conversation_' + Date.now();
+                    const title = importedData.title || `导入对话_${new Date().toLocaleDateString()}`;
+                    
+                    state.conversations[conversationId] = {
+                        title,
                         nodes: {},
-                        startNode: importedData.startNode
+                        startNode: importedData.startNode,
+                        selectedNodeId: null,
+                        zoomLevel: 1,
+                        treeCollapsedNodes: new Set()
                     };
+                    
+                    const conversation = state.conversations[conversationId];
                     
                     Object.values(importedData.nodes).forEach(node => {
                         const branches = node.branches || [];
@@ -1753,7 +2072,7 @@
                         // 处理位置信息：如果旧数据没有位置信息，使用默认值
                         const position = node.position || { x: 0, y: 0 };
                         
-                        state.conversation.nodes[node.id] = {
+                        conversation.nodes[node.id] = {
                             id: node.id,
                             role: node.role || 'user',
                             content: node.content || '',
@@ -1764,15 +2083,16 @@
                     });
                     
                     // 检查是否需要重新排列节点（旧版本数据可能没有位置信息）
-                    const needsAutoArrange = Object.values(state.conversation.nodes).some(node => 
+                    const needsAutoArrange = Object.values(conversation.nodes).some(node => 
                         node.position.x === 0 && node.position.y === 0
                     );
                     
                     if (needsAutoArrange) {
-                        autoArrangeNodes();
+                        autoArrangeNodes(conversation);
                     }
                     
-                    state.selectedNodeId = null;
+                    state.currentConversationId = conversationId;
+                    renderConversationsList();
                     renderAll();
                     saveStateToLocalStorage();
                     
@@ -1787,10 +2107,10 @@
             reader.readAsText(file);
         }
         
-        function autoArrangeNodes() {
-            if (!state.conversation.startNode) return;
+        function autoArrangeNodes(conversation) {
+            if (!conversation.startNode) return;
             
-            const queue = [{nodeId: state.conversation.startNode, depth: 0}];
+            const queue = [{nodeId: conversation.startNode, depth: 0}];
             const visited = new Set();
             const depthMap = {};
             
@@ -1803,7 +2123,7 @@
                 if (!depthMap[depth]) depthMap[depth] = [];
                 depthMap[depth].push(nodeId);
                 
-                const node = state.conversation.nodes[nodeId];
+                const node = conversation.nodes[nodeId];
                 node.branches.forEach(branch => {
                     queue.push({nodeId: branch.nextNodeId, depth: depth + 1});
                 });
@@ -1818,7 +2138,7 @@
                 const startX = 2500 - (count * CONSTANTS.HORIZONTAL_SPACING) / 2;
                 
                 nodesAtDepth.forEach((nodeId, index) => {
-                    state.conversation.nodes[nodeId].position = {
+                    conversation.nodes[nodeId].position = {
                         x: startX + index * CONSTANTS.HORIZONTAL_SPACING,
                         y: 200 + depth * CONSTANTS.VERTICAL_SPACING
                     };
