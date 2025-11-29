@@ -277,10 +277,10 @@
                     <!-- Tab切换 -->
                     <ul class="nav nav-tabs mb-3 px-1" id="sidebarTabs" role="tablist">
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="treeview-tab" data-bs-toggle="tab" data-bs-target="#treeview" type="button" role="tab" aria-controls="treeview" aria-selected="true">对话树</button>
+                            <button class="nav-link active" id="treeview-tab" data-bs-toggle="tab" data-bs-target="#treeview" type="button" role="tab" aria-controls="treeview" aria-selected="true" data-i18n="treeView">对话树</button>
                         </li>
                         <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations" type="button" role="tab" aria-controls="conversations" aria-selected="false">对话管理</button>
+                            <button class="nav-link" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations" type="button" role="tab" aria-controls="conversations" aria-selected="false" data-i18n="conversationManagement">对话管理</button>
                         </li>
                     </ul>
                     
@@ -288,7 +288,7 @@
                         <!-- 对话管理Tab -->
                         <div class="tab-pane fade" id="conversations" role="tabpanel" aria-labelledby="conversations-tab">
                             <div class="d-flex mb-3 px-1">
-                                <button class="btn btn-outline-light btn-sm flex-fill me-1" id="newConversationBtn">新建</button>
+                                <button class="btn btn-outline-light btn-sm flex-fill me-1" id="newConversationBtn" data-i18n="newBtn">新建</button>
                                 <button class="btn btn-outline-light btn-sm flex-fill me-1" id="exportBtn" data-i18n="exportBtn">导出</button>
                                 <button class="btn btn-outline-light btn-sm flex-fill" id="importBtn" data-i18n="importBtn">导入</button>
                             </div>
@@ -453,7 +453,12 @@
                 defaultConversationTitle: '新对话',
                 sendFailed: '发送失败：',
                 resendFailed: '重发失败：',
-                apiFailed: 'API连接失败：'
+                apiFailed: 'API连接失败：',
+                treeView: '对话树',
+                conversationManagement: '对话管理',
+                newBtn: '新建',
+                newConversation: '新对话',
+                oldConversation: '旧对话'
             },
             'zh-TW': {
                 pageTitle: 'VibeChat(α) | 多分支 LLM 網頁聊天',
@@ -511,7 +516,12 @@
                 defaultConversationTitle: '新對話',
                 sendFailed: '發送失敗：',
                 resendFailed: '重發失敗：',
-                apiFailed: 'API連接失敗：'
+                apiFailed: 'API連接失敗：',
+                treeView: '對話樹',
+                conversationManagement: '對話管理',
+                newBtn: '新建',
+                newConversation: '新對話',
+                oldConversation: '舊對話'
             },
             'en': {
                 pageTitle: 'VibeChat(α) | Multi-branch LLM WebChat',
@@ -569,7 +579,12 @@
                 defaultConversationTitle: 'New Conversation',
                 sendFailed: 'Send failed:',
                 resendFailed: 'Resend failed:',
-                apiFailed: 'API connection failed:'
+                apiFailed: 'API connection failed:',
+                treeView: 'Tree View',
+                conversationManagement: 'Conversation Management',
+                newBtn: 'New',
+                newConversation: 'New Conversation',
+                oldConversation: 'Old Conversation'
             },
             'ja': {
                 pageTitle: 'VibeChat(α) | マルチブランチ LLM ウェブチャット',
@@ -627,7 +642,12 @@
                 defaultConversationTitle: '新規会話',
                 sendFailed: '送信失敗：',
                 resendFailed: '再送信失敗：',
-                apiFailed: 'API接続失敗：'
+                apiFailed: 'API接続失敗：',
+                treeView: '会話ツリー',
+                conversationManagement: '会話管理',
+                newBtn: '新規',
+                newConversation: '新規会話',
+                oldConversation: '旧会話'
             }
         };
 
@@ -842,7 +862,7 @@
             const conversationId = 'conversation_' + Date.now();
             const now = new Date();
             const timeString = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
-            const title = `新对话_${timeString}`;
+            const title = `${i18n('newConversation')}_${timeString}`;
             
             state.conversations[conversationId] = {
                 title,
@@ -1956,7 +1976,7 @@
             const conversationId = 'conversation_' + Date.now();
             const now = new Date();
             const timeString = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
-            const title = `旧对话_${timeString}`;
+            const title = `${i18n('oldConversation')}_${timeString}`;
             
             state.conversations[conversationId] = {
                 title,
@@ -2052,7 +2072,7 @@
                     }
                     
                     const conversationId = 'conversation_' + Date.now();
-                    const title = importedData.title || `导入对话_${new Date().toLocaleDateString()}`;
+                    const title = importedData.title || `${i18n('newConversation')}_${new Date().toLocaleDateString()}`;
                     
                     state.conversations[conversationId] = {
                         title,
