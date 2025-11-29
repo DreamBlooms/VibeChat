@@ -257,7 +257,11 @@
                                         </div>
                                         <div class="form-group mt-2">
                                             <label for="modelName" class="form-label small" data-i18n="modelName">模型名称</label>
-                                            <input type="text" class="form-control form-control-sm" id="modelName" value="deepseek-chat" placeholder="输入模型名称" data-i18n-placeholder="modelNamePlaceholder" autocomplete="off">
+                                            <input type="text" class="form-control form-control-sm" id="modelName" list="modelOptions" value="deepseek-chat" placeholder="输入模型名称" data-i18n-placeholder="modelNamePlaceholder" autocomplete="off">
+                                            <datalist id="modelOptions">
+                                                <option value="deepseek-chat">
+                                                <option value="deepseek-reasoner">
+                                            </datalist>
                                         </div>
                                         <div class="form-group mt-2">
                                             <label for="temperature" class="form-label small" data-i18n="temperature">温度<small> (0.1-2.0)</small></label>
