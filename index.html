@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="cupcake">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,93 +7,237 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Doto:wght@100..900&display=swap" rel="stylesheet">
-    <link href="https://fastly.jsdelivr.net/npm/bootstrap@5.3.8/dist/css/bootstrap.min.css" rel="stylesheet">
-    <script src="https://fastly.jsdelivr.net/npm/bootstrap@5.3.8/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://fastly.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script src="https://cdn.tailwindcss.com?plugins=typography"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    fontFamily: {
+                        'doto': ['Doto', 'sans-serif'],
+                        'sans': ['Microsoft Yahei UI', 'Segoe UI', 'Tahoma', 'Geneva', 'Verdana', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     
     <style>
         :root {
-            --bg-color: #f8f9fa;
-            --sidebar-bg: #343a40;
-            --text-color: #212529;
-            --node-bg: white;
-            --border-color: #dee2e6;
-            --primary-color: #007bff;
-            --success-color: #28a745;
-            --info-color: #6f42c1;
-            --shadow: 0 3px 10px rgba(0,0,0,0.1);
+            --node-width: 450px;
+            --node-height-user: 150px;
+            --node-height-assistant: 250px;
+            --node-height-system: 150px;
+            --horizontal-spacing: 300;
+            --vertical-spacing: 250;
         }
 
-        [data-theme="dark"] {
-            --bg-color: #121212;
-            --sidebar-bg: #1a1a1a;
-            --text-color: #e9ecef;
-            --node-bg: #2d2d2d;
-            --border-color: #444;
-            --primary-color: #0d6efd;
-            --success-color: #198754;
-            --info-color: #6f42c1;
-            --shadow: 0 3px 10px rgba(0,0,0,0.3);
-        }
-
-        body {
-            font-family: 'Microsoft Yahei UI', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background-color: var(--bg-color);
-            color: var(--text-color);
-            overflow: hidden;
-            margin: 0;
-            padding: 0;
-            transition: background-color 0.3s, color 0.3s;
-        }
-
-        .badge.bg-info { background-color: var(--info-color) !important; }
+        .vibe-font { font-family: 'Doto', sans-serif; font-weight: 700; }
         
-
-        .vibe-font { font-family: 'Doto', sans-serif; font-weight: 300; }
-        .container-fluid { height: 100vh; padding: 0; }
-        .sidebar { background-color: var(--sidebar-bg); color: white; height: 100vh; overflow-y: auto; }
-        .editor-container { position: relative; height: 100vh; overflow: hidden; background-color: var(--bg-color); display: flex; flex-direction: column; padding: 0 !important; }
-        .story-canvas-container { position: relative; width: 100%; flex: 1; overflow: auto; }
-        .story-canvas { position: relative; width: 5000px; height: 5000px; background-color: var(--bg-color); background-image: linear-gradient(var(--border-color) 1px, transparent 1px), linear-gradient(90deg, var(--border-color) 1px, transparent 1px); background-size: 20px 20px; transform-origin: 0 0; transition: transform 0.1s ease; }
-        .node { position: absolute; width: 450px; background-color: var(--node-bg); border-radius: 8px; box-shadow: var(--shadow); padding: 15px; cursor: move; transition: all 0.2s; z-index: 10; padding: .5rem !important; }
-        .node.selected { box-shadow: 0 0 0 2px var(--primary-color), 0 5px 15px rgba(0,0,0,0.2); z-index: 20; }
-        .node.muted { opacity: 0.55; background-color: var(--bg-color); }
-        .node.system { border-left: 5px solid var(--success-color); height: 150px; }
-        .node.user { border-left: 5px solid var(--primary-color); height: 150px; }
-        .node.assistant { border-left: 5px solid var(--info-color); height: 250px; }
-        .node-content { font-size: 14px; margin-bottom: 0; border: 1px dashed var(--border-color); padding: 8px; border-radius: 4px; word-break: break-word; overflow-y: auto; height: calc(100% - 25px); }
+        .app-container {
+            background-color: oklch(var(--b3));
+        }
+        
+        [data-theme="dark"] .app-container {
+            background-color: oklch(var(--b2));
+        }
+        
+        .sidebar {
+            background-color: oklch(var(--b2));
+            height: 100vh;
+            overflow-y: auto;
+        }
+        
+        [data-theme="dark"] .sidebar {
+            background-color: oklch(var(--b1));
+        }
+        
+        .story-canvas-container {
+            position: relative;
+            flex: 1;
+            overflow: auto;
+            background-color: oklch(var(--b3));
+            scrollbar-width: thin;
+            scrollbar-color: oklch(var(--bc) / 0.3) transparent;
+        }
+        
+        .story-canvas-container::-webkit-scrollbar {
+            width: 8px;
+            height: 8px;
+        }
+        
+        .story-canvas-container::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        
+        .story-canvas-container::-webkit-scrollbar-thumb {
+            background-color: oklch(var(--bc) / 0.3);
+            border-radius: 4px;
+        }
+        
+        .story-canvas-container::-webkit-scrollbar-thumb:hover {
+            background-color: oklch(var(--bc) / 0.5);
+        }
+        
+        [data-theme="forest"] .story-canvas-container {
+            background-color: oklch(var(--b2));
+            scrollbar-color: oklch(var(--bc) / 0.2) transparent;
+        }
+        .story-canvas { 
+            position: relative; 
+            width: 5000px; 
+            height: 5000px; 
+            background-color: oklch(var(--b3)); 
+            background-image: linear-gradient(oklch(var(--bc) / 0.1) 1px, transparent 1px), linear-gradient(90deg, oklch(var(--bc) / 0.1) 1px, transparent 1px);
+            background-size: 20px 20px; 
+            transform-origin: 0 0; 
+            transition: transform 0.1s ease; 
+        }
+        
+        [data-theme="dark"] .story-canvas {
+            background-color: oklch(var(--b2));
+            background-image: linear-gradient(oklch(var(--bc) / 0.1) 1px, transparent 1px), linear-gradient(90deg, oklch(var(--bc) / 0.1) 1px, transparent 1px);
+        }
+        
+        .node { 
+            position: absolute; 
+            width: var(--node-width); 
+            cursor: move; 
+            transition: all 0.2s; 
+            z-index: 10; 
+        }
+        
+        .node-content { 
+            font-size: 14px; 
+            word-break: break-word; 
+            overflow-y: auto; 
+        }
+        
+        .node.system { border-left: 5px solid oklch(var(--su)); }
+        .node.user { border-left: 5px solid oklch(var(--p)); }
+        .node.assistant { border-left: 5px solid oklch(var(--s)); }
+        
+        .node.selected { 
+            z-index: 20; 
+            outline: 2px solid oklch(var(--p));
+            outline-offset: 2px;
+        }
+        
+        .node.muted { opacity: 0.55; }
+        
         .connections { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 5; }
-        .tree-view { list-style-type: none; padding-left: 0; min-width: 200px; overflow-x: auto; }
+        
+        .tree-view { 
+            list-style-type: none; 
+            padding-left: 0; 
+            min-width: 200px; 
+            overflow-x: auto; 
+        }
         .tree-view ul { list-style-type: none; padding-left: 20px; }
-        .tree-node { padding: 5px 10px; cursor: pointer; border-radius: 4px; margin-bottom: 2px; min-width: 200px; font-size: .75em; }
-        .tree-node:hover { background-color: rgba(255, 255, 255, 0.1); }
-        .tree-node.selected { background-color: var(--primary-color); }
-        .zoom-controls, .toolbar { position: absolute; top: 20px; z-index: 100; }
-        .zoom-controls { right: 20px; }
-        .toolbar { left: 20px; display: flex; gap: 5px; }
-        .chat-input-container { background-color: var(--node-bg); padding: 25px; border-top: 1px solid var(--border-color); z-index: 100; flex-shrink: 0; }
-        .api-settings { padding: 4px 4px; }
-        .role-indicator { font-size: 10px; font-weight: bold; padding: 2px 6px; border-radius: 10px; margin-bottom: 5px; display: inline-block; }
-        .role-system { background-color: var(--success-color); color: white; }
-        .role-user { background-color: var(--primary-color); color: white; }
-        .role-assistant { background-color: var(--info-color); color: white; }
-        .typing-indicator { display: inline-block; width: 10px; height: 10px; background-color: #6c757d; border-radius: 50%; margin-right: 5px; animation: typing 1s infinite; }
-        @keyframes typing { 0%, 100% { opacity: 0.3; } 50% { opacity: 1; } }
-        .reasoning-content { background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 8px; margin-bottom: 8px; font-size: 13px; color: #6c757d; max-height: 120px; overflow-y: auto; }
-        .reasoning-toggle { font-size: 12px; color: #6c757d; cursor: pointer; user-select: none; margin-bottom: 5px; display: inline-block; }
-        .reasoning-toggle:hover { color: #495057; }
+        .tree-node { 
+            padding: 5px 10px; 
+            cursor: pointer; 
+            border-radius: 4px; 
+            margin-bottom: 2px; 
+            min-width: 200px; 
+            font-size: .75em; 
+        }
+        .tree-node:hover { background-color: oklch(var(--b3) / 0.5); }
+        .tree-node.selected { background-color: oklch(var(--p) / 0.3); }
+        
+        .zoom-controls { position: absolute; top: 20px; right: 20px; z-index: 100; }
+        
+        .chat-input-container { 
+            padding: 20px; 
+            border-top: 1px solid oklch(var(--bc) / 0.1); 
+            z-index: 100; 
+            flex-shrink: 0; 
+            background-color: oklch(var(--b2));
+            min-height: 80px;
+        }
+        
+        [data-theme="dark"] .chat-input-container {
+            background-color: oklch(var(--b1));
+        }
+        
+        .typing-indicator { 
+            display: inline-block; 
+            width: 10px; 
+            height: 10px; 
+            background-color: oklch(var(--bc) / 0.5); 
+            border-radius: 50%; 
+            margin-right: 5px; 
+            animation: typing 1s infinite; 
+        }
+        
+        @keyframes typing { 
+            0%, 100% { opacity: 0.3; } 
+            50% { opacity: 1; } 
+        }
+        
+        .reasoning-content { 
+            background-color: oklch(var(--b3)); 
+            border: 1px solid oklch(var(--bc) / 0.1); 
+            border-radius: 4px; 
+            padding: 8px; 
+            margin-bottom: 8px; 
+            font-size: 13px; 
+            color: oklch(var(--bc) / 0.7); 
+            max-height: 120px; 
+            overflow-y: auto; 
+        }
+        
+        .reasoning-toggle { 
+            font-size: 12px; 
+            color: oklch(var(--bc) / 0.7); 
+            cursor: pointer; 
+            user-select: none; 
+            margin-bottom: 5px; 
+            display: inline-block; 
+        }
+        
         .reasoning-collapsed { max-height: 55px; overflow: hidden; }
-        .reasoning-collapsed::after { content: "..."; display: block; text-align: center; color: #adb5bd; }
-        .resend-btn, .copy-btn { position: absolute; top: 5px; background: rgba(255, 255, 255, 0.9); border: 1px solid var(--border-color); border-radius: 4px; padding: 2px 6px; font-size: 10px; cursor: pointer; z-index: 15; opacity: 0; transition: opacity 0.2s; }
-        .copy-btn { right: 5px; }
+        .reasoning-collapsed::after { content: "..."; display: block; text-align: center; }
+        
+        .node-btn { 
+            position: absolute; 
+            top: 5px; 
+            background: oklch(var(--b1)); 
+            border: 1px solid oklch(var(--bc) / 0.2); 
+            border-radius: 4px; 
+            padding: 2px 6px; 
+            font-size: 10px; 
+            cursor: pointer; 
+            z-index: 15; 
+            opacity: 0; 
+            transition: opacity 0.2s; 
+        }
+        
+        .node:hover .node-btn { opacity: 1; }
         .resend-btn { right: 30px; }
-        .node:hover .resend-btn, .node:hover .copy-btn { opacity: 1; }
-        .resend-btn:hover { background-color: var(--primary-color); color: white; }
-        .copy-btn:hover { background-color: var(--success-color); color: white; }
-        .copy-success { position: absolute; top: 5px; left: 50%; transform: translateX(-50%); background-color: #0dcaf0; color: white; padding: 2px 6px; border-radius: 4px; font-size: 10px; z-index: 15; opacity: 0; transition: opacity 0.2s; }
+        .resend-btn:hover { background-color: oklch(var(--p)); color: white; }
+        .copy-btn { right: 5px; }
+        .copy-btn:hover { background-color: oklch(var(--su)); color: white; }
+        
+        .copy-success { 
+            position: absolute; 
+            top: 5px; 
+            left: 50%; 
+            transform: translateX(-50%); 
+            background-color: oklch(var(--in)); 
+            color: white; 
+            padding: 2px 6px; 
+            border-radius: 4px; 
+            font-size: 10px; 
+            z-index: 15; 
+            opacity: 0; 
+            transition: opacity 0.2s; 
+        }
+        
         .copy-success.show { opacity: 1; }
         
-        /* 精简的Markdown样式 */
         .node-content { font-size: 14px; line-height: 1.5; word-wrap: break-word; }
         .node-content h1, .node-content h2, .node-content h3, .node-content h4, .node-content h5, .node-content h6 { margin-top: 0.5em; margin-bottom: 0.3em; font-weight: 600; line-height: 1.25; }
         .node-content h1 { font-size: 1.5rem !important; }
@@ -101,90 +245,95 @@
         .node-content h3 { font-size: 1.2rem !important; }
         .node-content h4 { font-size: 1.1rem !important; }
         .node-content h5 { font-size: 1.05rem !important; }
-        .node-content h6 { font-size: 1rem !important; color: #6c757d !important; }
+        .node-content h6 { font-size: 1rem !important; color: oklch(var(--bc) / 0.7) !important; }
         .node-content p { margin-bottom: 0.5em; }
         .node-content ul, .node-content ol { padding-left: 1.5em; margin-bottom: 0.5em; }
         .node-content li { margin-bottom: 0.2em; }
-        .node-content code { background-color: #f1f3f4; border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.9em; font-family: 'Courier New', monospace; }
-        .node-content pre { background-color: var(--bg-color); border: 1px solid var(--border-color); border-radius: 4px; padding: 0.8em; overflow: auto; margin-bottom: 0.8em; }
+        .node-content code { background-color: oklch(var(--b3)); border-radius: 3px; padding: 0.1em 0.3em; font-size: 0.9em; }
+        .node-content pre { background-color: oklch(var(--b3)); border: 1px solid oklch(var(--bc) / 0.1); border-radius: 4px; padding: 0.8em; overflow: auto; margin-bottom: 0.8em; }
         .node-content pre code { background: none; padding: 0; }
-        .node-content blockquote { border-left: 4px solid var(--border-color); padding-left: 1em; margin-left: 0; color: #6c757d; margin-bottom: 0.8em; }
+        .node-content blockquote { border-left: 4px solid oklch(var(--bc) / 0.2); padding-left: 1em; margin-left: 0; color: oklch(var(--bc) / 0.7); margin-bottom: 0.8em; }
         .node-content table { border-collapse: collapse; width: 100%; margin-bottom: 0.8em; }
-        .node-content table th, .node-content table td { border: 1px solid var(--border-color); padding: 0.3em 0.5em; text-align: left; }
-        .node-content table th { background-color: var(--bg-color); font-weight: 600; }
+        .node-content table th, .node-content table td { border: 1px solid oklch(var(--bc) / 0.1); padding: 0.3em 0.5em; text-align: left; }
+        .node-content table th { background-color: oklch(var(--b3)); font-weight: 600; }
         
-        /* 树形视图折叠样式 */
         .tree-node.has-children { position: relative; }
-        .tree-toggle { position: absolute; left: -15px; top: 50%; transform: translateY(-50%); width: 12px; height: 12px; cursor: pointer; color: #adb5bd; font-size: 10px; display: flex; align-items: center; justify-content: center; }
-        .tree-toggle:hover { color: white; }
+        .tree-toggle { 
+            position: absolute; 
+            left: -15px; 
+            top: 50%; 
+            transform: translateY(-50%); 
+            width: 12px; 
+            height: 12px; 
+            cursor: pointer; 
+            font-size: 10px; 
+            display: flex; 
+            align-items: center; 
+            justify-content: center; 
+        }
         .tree-children { transition: max-height 0.3s ease; overflow: hidden; }
         .tree-children.collapsed { max-height: 0; }
         
-        /* 对话管理样式 */
         .conversations-list { max-height: 300px; overflow-y: auto; margin-bottom: 15px; }
-        .conversation-item { display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; border-radius: 4px; margin-bottom: 5px; background-color: rgba(255, 255, 255, 0.1); }
-        .conversation-item:hover { background-color: rgba(255, 255, 255, 0.15); }
-        .conversation-item.active { background-color: var(--primary-color); }
+        .conversation-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 8px 10px; 
+            border-radius: 4px; 
+            margin-bottom: 5px; 
+            background-color: oklch(var(--b3) / 0.3); 
+        }
+        .conversation-item:hover { background-color: oklch(var(--b3) / 0.5); }
         .conversation-title { flex-grow: 1; cursor: pointer; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .conversation-actions { display: flex; gap: 5px; }
-        .conversation-actions button { padding: 2px 6px; font-size: 12px; }
         
-        /* Tab样式优化 */
-        .sidebar .nav-tabs { border-bottom: 1px solid rgba(255, 255, 255, 0.2); }
-        .sidebar .nav-tabs .nav-link { color: white; border: none; }
-        .sidebar .nav-tabs .nav-link:hover { background-color: rgba(255, 255, 255, 0.1); }
-        .sidebar .nav-tabs .nav-link.active { background-color: white; color: black; }
-        
-        /* 按钮样式优化 */
-        .btn-group-sm .btn { font-size: 0.75rem; }
-        
-        /* 移动端优化 */
-        .mobile-sidebar-toggle {
-            display: none;
-            position: absolute;
-            top: -3px;
-            left: -3px;
-            z-index: 1000;
-            background: rgba(52, 58, 64, 0.9);
-            border: none;
-            color: white;
-            border-radius: 4px;
-            padding: 8px 12px;
-            font-size: 14px;
+        .sidebar { 
+            background-color: oklch(var(--b3)); 
+            height: 100vh; 
+            overflow-y: auto; 
         }
         
-        .sidebar-backdrop {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 999;
+        #sidebar {
+            background-color: oklch(var(--b2));
         }
         
-        @media (max-width: 768px) {
-            .mobile-sidebar-toggle {
-                display: block;
-            }
-            
+        [data-theme="dark"] .sidebar {
+            background-color: oklch(var(--b2));
+        }
+        
+        .chat-input-container {
+            background-color: oklch(var(--b2));
+        }
+        
+        [data-theme="dark"] .chat-input-container {
+            background-color: oklch(var(--b1));
+        }
+        
+        @media (max-width: 1024px) {
             .sidebar {
                 position: fixed;
                 top: 0;
-                left: -100%;
+                left: 0;
                 width: 85%;
                 max-width: 300px;
-                z-index: 1000;
-                transition: left 0.3s ease;
+                z-index: 50;
+                box-shadow: 2px 0 10px rgba(0,0,0,0.3);
             }
             
-            .sidebar.active {
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
                 left: 0;
+                width: 100%;
+                height: 100%;
+                background: rgba(0, 0, 0, 0.5);
+                z-index: 40;
             }
             
-            .editor-container {
-                width: 100%;
+            .sidebar-overlay.active {
+                display: block;
             }
             
             .node {
@@ -192,16 +341,33 @@
                 max-width: 400px;
             }
             
-            .toolbar {
-                left: 60px;
+            .zoom-controls {
+                right: 10px;
             }
             
             .chat-input-container {
                 padding: 15px;
             }
             
-            .zoom-controls {
-                right: 10px;
+            .mobile-menu-btn {
+                display: flex !important;
+            }
+            
+            .toolbar {
+                left: 20px !important;
+            }
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+        }
+        
+        @media (min-width: 1024px) {
+            .toolbar {
+                left: 340px !important;
+            }
+            .story-canvas-container, .chat-input-container {
+                margin-left: 0;
             }
         }
         
@@ -211,14 +377,6 @@
                 max-width: 350px;
             }
             
-            .toolbar {
-                left: 50px;
-            }
-            
-            .zoom-controls {
-                right: 5px;
-            }
-            
             .chat-input-container {
                 padding: 10px;
             }
@@ -226,129 +384,133 @@
     </style>
 </head>
 <body>
-    <!-- 移动端侧边栏切换按钮 -->
-    <button class="mobile-sidebar-toggle" id="mobileSidebarToggle">☰</button>
-    <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
     
-    <div class="container-fluid">
-        <div class="row">
-            <div class="col-md-3 sidebar" id="sidebar">
-                <div class="p-3">
-                    <h3 class="mb-3 vibe-font">VibeChat<sup><a href="https://github.com/DreamBlooms/VibeChat" target="_blank" class="text-white" style="text-decoration:none;">(a)</a></sup></h3>
-                    
-                    <!-- API设置 -->
-                    <div class="api-settings mb-3">
-                        <div class="accordion" id="apiSettingsAccordion">
-                            <div class="accordion-item border-0">
-                                <h2 class="accordion-header" id="apiSettingsHeading">
-                                    <button class="accordion-button bg-transparent p-2 ps-3 collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#apiSettingsCollapse" aria-expanded="false" aria-controls="apiSettingsCollapse">
-                                        <h6 class="m-1" data-i18n="apiSettings">API 设置</h6>
-                                    </button>
-                                </h2>
-                                <div id="apiSettingsCollapse" class="accordion-collapse collapse" aria-labelledby="apiSettingsHeading" data-bs-parent="#apiSettingsAccordion">
-                                    <div class="accordion-body p-3">
-                                        <div class="form-group">
-                                            <label for="apiUrl" class="form-label small" data-i18n="apiUrl">API地址</label>
-                                            <input type="text" class="form-control form-control-sm" id="apiUrl" value="https://api.deepseek.com/chat/completions" autocomplete="off">
-                                        </div>
-                                        <div class="form-group mt-2">
-                                            <label for="apiKey" class="form-label small" data-i18n="apiKey">API密钥</label>
-                                            <input type="password" class="form-control form-control-sm" id="apiKey" placeholder="输入API密钥" data-i18n-placeholder="apiKeyPlaceholder" autocomplete="off">
-                                        </div>
-                                        <div class="form-group mt-2">
-                                            <label for="modelName" class="form-label small" data-i18n="modelName">模型名称</label>
-                                            <input type="text" class="form-control form-control-sm" id="modelName" list="modelOptions" value="deepseek-chat" placeholder="输入模型名称" data-i18n-placeholder="modelNamePlaceholder" autocomplete="off">
-                                            <datalist id="modelOptions">
-                                                <option value="deepseek-chat">
-                                                <option value="deepseek-reasoner">
-                                            </datalist>
-                                        </div>
-                                        <div class="form-group mt-2">
-                                            <label for="temperature" class="form-label small" data-i18n="temperature">温度<small> (0.1-2.0)</small></label>
-                                            <input type="number" class="form-control form-control-sm" id="temperature" min="0" max="2" step="0.1" value="1.0" autocomplete="off">
-                                        </div>
-                                        <button class="btn btn-outline-dark btn-sm w-100 mt-3" id="testApiBtn" data-i18n="testConnection">测试连接</button>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+    <div class="app-container flex h-screen">
+        <!-- Sidebar -->
+        <aside class="sidebar w-80 flex-shrink-0 hidden lg:flex flex-col" id="sidebar">
+            <div class="p-4">
+                <h3 class="mb-4 vibe-font text-lg">
+                    VibeChat<sup><a href="https://github.com/DreamBlooms/VibeChat" target="_blank" class="link link-hover">(a)</a></sup>
+                </h3>
+                
+                <div class="collapse collapse-arrow bg-base-300 mb-4 rounded-lg">
+                    <input type="checkbox" checked /> 
+                    <div class="collapse-title font-medium min-h-0">
+                        <small data-i18n="apiSettings">API 设置</small>
                     </div>
-                    
-                    <!-- Tab切换 -->
-                    <ul class="nav nav-tabs mb-3 px-1" id="sidebarTabs" role="tablist">
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link active" id="treeview-tab" data-bs-toggle="tab" data-bs-target="#treeview" type="button" role="tab" aria-controls="treeview" aria-selected="true" data-i18n="treeView">对话树</button>
-                        </li>
-                        <li class="nav-item" role="presentation">
-                            <button class="nav-link" id="conversations-tab" data-bs-toggle="tab" data-bs-target="#conversations" type="button" role="tab" aria-controls="conversations" aria-selected="false" data-i18n="conversationManagement">对话管理</button>
-                        </li>
-                    </ul>
-                    
-                    <div class="tab-content" id="sidebarTabsContent">
-                        <!-- 对话管理Tab -->
-                        <div class="tab-pane fade" id="conversations" role="tabpanel" aria-labelledby="conversations-tab">
-                            <div class="d-flex mb-3 px-1">
-                                <button class="btn btn-outline-light btn-sm flex-fill me-1" id="newConversationBtn" data-i18n="newBtn">新建</button>
-                                <button class="btn btn-outline-light btn-sm flex-fill me-1" id="exportBtn" data-i18n="exportBtn">导出</button>
-                                <button class="btn btn-outline-light btn-sm flex-fill" id="importBtn" data-i18n="importBtn">导入</button>
-                            </div>
-                            <input type="file" id="importFile" style="display: none;" accept=".json">
-                            
-                            <hr class="bg-light">
-                            
-                            <div class="conversations-list" id="conversationsList">
-                                <!-- 对话列表将在这里动态生成 -->
-                            </div>
+                    <div class="collapse-content"> 
+                        <div class="form-control">
+                            <label class="label py-1">
+                                <span class="label-text text-sm" data-i18n="apiUrl">API地址</span>
+                            </label>
+                            <input type="text" class="input input-sm input-bordered" id="apiUrl" value="https://api.deepseek.com/chat/completions" autocomplete="off">
                         </div>
-                        
-                        <!-- 对话树Tab -->
-                        <div class="tab-pane fade show active" id="treeview" role="tabpanel" aria-labelledby="treeview-tab">
-                            <div id="treeViewContainer">
-                                <ul class="tree-view" id="treeView"></ul>
-                            </div>
+                        <div class="form-control mt-2">
+                            <label class="label py-1">
+                                <span class="label-text text-sm" data-i18n="apiKey">API密钥</span>
+                            </label>
+                            <input type="password" class="input input-sm input-bordered" id="apiKey" placeholder="输入API密钥" data-i18n-placeholder="apiKeyPlaceholder" autocomplete="off">
                         </div>
+                        <div class="form-control mt-2">
+                            <label class="label py-1">
+                                <span class="label-text text-sm" data-i18n="modelName">模型名称</span>
+                            </label>
+                            <input type="text" class="input input-sm input-bordered" id="modelName" list="modelOptions" value="deepseek-chat" placeholder="输入模型名称" data-i18n-placeholder="modelNamePlaceholder" autocomplete="off">
+                            <datalist id="modelOptions">
+                                <option value="deepseek-chat">
+                                <option value="deepseek-reasoner">
+                            </datalist>
+                        </div>
+                        <div class="form-control mt-2">
+                            <label class="label py-1">
+                                <span class="label-text text-sm" data-i18n="temperature">温度<small> (0.1-2.0)</small></span>
+                            </label>
+                            <input type="number" class="input input-sm input-bordered" id="temperature" min="0" max="2" step="0.1" value="1.0" autocomplete="off">
+                        </div>
+                        <button class="btn btn-outline btn-sm w-full mt-3" id="testApiBtn" data-i18n="testConnection">测试连接</button>
                     </div>
+                </div>
+                    
+                <div class="tabs tabs-boxed bg-base-100 mb-4">
+                    <a class="tab tab-active flex-1" id="treeview-tab" data-i18n="treeView">对话树</a>
+                    <a class="tab flex-1" id="conversations-tab" data-i18n="conversationManagement">对话管理</a>
+                </div>
+                
+                <div id="treeview-content">
+                    <ul class="tree-view" id="treeView"></ul>
+                </div>
+                
+                <div id="conversations-content" class="hidden">
+                    <div class="flex gap-2 mb-3">
+                        <button class="btn btn-outline btn-sm flex-1" id="newConversationBtn" data-i18n="newBtn">新建</button>
+                        <button class="btn btn-outline btn-sm flex-1" id="exportBtn" data-i18n="exportBtn">导出</button>
+                        <button class="btn btn-outline btn-sm flex-1" id="importBtn" data-i18n="importBtn">导入</button>
+                    </div>
+                    <input type="file" id="importFile" style="display: none;" accept=".json">
+                    
+                    <div class="divider my-2"></div>
+                    
+                    <div class="conversations-list" id="conversationsList">
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content -->
+        <main class="flex-1 flex flex-col min-w-0">
+            <!-- Toolbar -->
+            <div class="toolbar absolute top-5 left-5 z-[100]">
+                <div class="join">
+                    <button class="btn btn-sm btn-ghost mobile-menu-btn" id="mobileMenuBtn" title="菜单">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-ghost" id="themeToggle" title="日之亮面">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-ghost" id="clearConversationBtn" title="清空对话">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                    </button>
+                    <button class="btn btn-sm btn-error text-white" id="deleteNodeBtn" data-i18n="deleteNode">删除节点</button>
                 </div>
             </div>
             
-            <div class="col-md-9 editor-container">
-                <div class="toolbar">
-                    <div class="btn-group">
-                        <button class="btn btn-dark btn-sm" id="themeToggle" title="日之亮面">🌙</button>
-                        <button class="btn btn-secondary btn-sm" id="clearConversationBtn" title="清空对话">🗑️</button>
-                        <button class="btn btn-danger btn-sm" id="deleteNodeBtn" data-i18n="deleteNode">删除节点</button>
-                    </div>
-                </div>
-                
-                <div class="story-canvas-container" id="canvasContainer">
-                    <div class="story-canvas" id="storyCanvas">
-                        <svg class="connections" id="connections"></svg>
-                    </div>
-                </div>
-                
-                <div class="zoom-controls">
-                    <div class="btn-group-vertical">
-                        <button class="btn btn-light btn-sm" id="zoomInBtn">+</button>
-                        <button class="btn btn-light btn-sm" id="zoomOutBtn">-</button>
-                        <button class="btn btn-light btn-sm" id="resetZoomBtn">↻</button>
-                    </div>
-                </div>
-                
-                <div class="chat-input-container">
-                    <div class="input-group">
-                        <input type="text" class="form-control" id="userInput" placeholder="输入您的问题..." autocomplete="off" data-i18n-placeholder="inputPlaceholder">
-                        <button class="btn btn-primary" id="sendBtn" data-i18n="sendBtn">发送</button>
-                    </div>
-                    <small class="form-text text-muted mt-2">
-                        <span data-i18n="selectedNode">选中节点:</span> <span id="contextInfo">1</span>
-                    </small>
+            <!-- Canvas -->
+            <div class="story-canvas-container flex-1" id="canvasContainer">
+                <div class="story-canvas" id="storyCanvas">
+                    <svg class="connections" id="connections"></svg>
                 </div>
             </div>
-        </div>
+            
+            <!-- Zoom Controls -->
+            <div class="zoom-controls">
+                <div class="join join-vertical shadow-lg">
+                    <button class="btn btn-sm btn-ghost bg-base-100 mb-1" id="zoomInBtn">+</button>
+                    <button class="btn btn-sm btn-ghost bg-base-100 mb-1" id="zoomOutBtn">-</button>
+                    <button class="btn btn-sm btn-ghost bg-base-100 mb-1" id="resetZoomBtn">↻</button>
+                </div>
+            </div>
+            
+            <!-- Chat Input -->
+            <div class="chat-input-container">
+                <div class="join w-full">
+                    <input type="text" class="input input-bordered join-item flex-1" id="userInput" placeholder="输入您的问题..." autocomplete="off" data-i18n-placeholder="inputPlaceholder">
+                    <button class="btn btn-primary join-item" id="sendBtn" data-i18n="sendBtn">发送</button>
+                </div>
+                <small class="text-base-content/60 mt-2 block">
+                    <span data-i18n="selectedNode">选中节点:</span> <span id="contextInfo">1</span>
+                </small>
+            </div>
+        </main>
     </div>
 
     <script>
-        // 配置 marked.js
         marked.setOptions({
             breaks: true,
             gfm: true,
@@ -356,7 +518,6 @@
             mangle: false
         });
         
-        // 应用常量
         const CONSTANTS = {
             HORIZONTAL_SPACING: 300,
             VERTICAL_SPACING: 250,
@@ -368,16 +529,14 @@
             }
         };
         
-        // 应用状态
         const state = {
-            conversations: {}, // 存储所有对话 {id: {title, nodes, startNode, selectedNodeId, zoomLevel, treeCollapsedNodes}}
+            conversations: {},
             currentConversationId: null,
             isDragging: false,
             dragStart: { x: 0, y: 0 },
-            isMobile: window.innerWidth <= 768
+            isMobile: window.innerWidth <= 1024
         };
         
-        // DOM 元素引用
         const elements = {
             canvas: document.getElementById('storyCanvas'),
             connections: document.getElementById('connections'),
@@ -388,14 +547,17 @@
             deleteNodeBtn: document.getElementById('deleteNodeBtn'),
             clearConversationBtn: document.getElementById('clearConversationBtn'),
             sidebar: document.getElementById('sidebar'),
-            mobileSidebarToggle: document.getElementById('mobileSidebarToggle'),
-            sidebarBackdrop: document.getElementById('sidebarBackdrop'),
+            sidebarOverlay: document.getElementById('sidebarOverlay'),
+            mobileMenuBtn: document.getElementById('mobileMenuBtn'),
             themeToggle: document.getElementById('themeToggle'),
             conversationsList: document.getElementById('conversationsList'),
-            newConversationBtn: document.getElementById('newConversationBtn')
+            newConversationBtn: document.getElementById('newConversationBtn'),
+            treeviewTab: document.getElementById('treeview-tab'),
+            conversationsTab: document.getElementById('conversations-tab'),
+            treeviewContent: document.getElementById('treeview-content'),
+            conversationsContent: document.getElementById('conversations-content')
         };
 
-        // 多语言资源
         const i18nResources = {
             'zh-CN': {
                 pageTitle: 'VibeChat(α) | 多分支 LLM 网页聊天',
@@ -651,26 +813,21 @@
             }
         };
 
-        // 当前语言
         let currentLanguage = 'zh-CN';
 
-        // 初始化应用
         document.addEventListener('DOMContentLoaded', function() {
-            // 初始化语言
             initLanguage();
-            
-            // 初始化主题
             initTheme();
-            
             loadStateFromLocalStorage();
             
-            // 如果没有当前对话，创建一个
             if (!state.currentConversationId || !state.conversations[state.currentConversationId]) {
                 createNewConversation();
             }
             
             setupEventListeners();
             setupMobileEvents();
+            setupTabs();
+            initMobileDrawer();
             renderAll();
             
             const container = document.getElementById('canvasContainer');
@@ -684,12 +841,10 @@
             window.addEventListener('resize', handleResize);
         });
         
-        // 获取当前对话
         function getCurrentConversation() {
             return state.conversations[state.currentConversationId];
         }
         
-        // 初始化语言
         function initLanguage() {
             const browserLang = navigator.language || navigator.userLanguage;
             const lang = browserLang.split('-')[0];
@@ -706,7 +861,6 @@
             applyLanguage();
         }
         
-        // 应用语言
         function applyLanguage() {
             document.querySelectorAll('[data-i18n]').forEach(element => {
                 const key = element.getAttribute('data-i18n');
@@ -721,66 +875,45 @@
                     element.placeholder = i18nResources[currentLanguage][key];
                 }
             });
-            
-            // 更新按钮的title属性
-            document.querySelectorAll('.resend-btn').forEach(btn => {
-                btn.title = i18n('resendTooltip');
-            });
-            
-            document.querySelectorAll('.copy-btn').forEach(btn => {
-                btn.title = i18n('copyTooltip');
-            });
-            
-            // 更新清空对话按钮的title
-            elements.clearConversationBtn.title = i18n('clearConversationTitle');
-            
-            updateThemeTooltip();
         }
         
-        // 翻译函数
         function i18n(key) {
             return i18nResources[currentLanguage][key] || key;
         }
         
-        // 初始化主题
         function initTheme() {
-            // 检测系统偏好
             const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-            const savedTheme = localStorage.getItem('vibechat-theme') || (prefersDark ? 'dark' : 'light');
+            const savedTheme = localStorage.getItem('vibechat-theme') || (prefersDark ? 'dark' : 'cupcake');
             document.documentElement.setAttribute('data-theme', savedTheme);
             updateThemeToggle(savedTheme);
         }
         
-        // 更新主题切换按钮
         function updateThemeToggle(theme) {
-            elements.themeToggle.textContent = theme === 'dark' ? '☀️' : '🌙';
+            const isDark = theme === 'dark';
+            elements.themeToggle.innerHTML = isDark 
+                ? `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" /></svg>`
+                : `<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>`;
             updateThemeTooltip();
         }
         
-        // 更新主题提示
         function updateThemeTooltip() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
             elements.themeToggle.title = currentTheme === 'dark' ? i18n('lightThemeTooltip') : i18n('darkThemeTooltip');
         }
         
-        // 切换主题
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme');
-            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            const newTheme = currentTheme === 'dark' ? 'cupcake' : 'dark';
             
             document.documentElement.setAttribute('data-theme', newTheme);
             localStorage.setItem('vibechat-theme', newTheme);
             updateThemeToggle(newTheme);
         }
         
-        // 移动端事件设置
         function setupMobileEvents() {
-            if (!state.isMobile) return;
+            elements.mobileMenuBtn.addEventListener('click', toggleSidebar);
+            elements.sidebarOverlay.addEventListener('click', closeSidebar);
             
-            elements.mobileSidebarToggle.addEventListener('click', toggleSidebar);
-            elements.sidebarBackdrop.addEventListener('click', closeSidebar);
-            
-            // 点击树节点时自动关闭侧边栏
             elements.treeView.addEventListener('click', function(e) {
                 if (e.target.closest('.tree-node')) {
                     setTimeout(closeSidebar, 300);
@@ -788,25 +921,62 @@
             });
         }
         
-        function toggleSidebar() {
-            elements.sidebar.classList.toggle('active');
-            elements.sidebarBackdrop.style.display = elements.sidebar.classList.contains('active') ? 'block' : 'none';
-        }
-        
-        function closeSidebar() {
-            elements.sidebar.classList.remove('active');
-            elements.sidebarBackdrop.style.display = 'none';
-        }
-        
-        function handleResize() {
-            state.isMobile = window.innerWidth <= 768;
-            
-            if (!state.isMobile) {
-                closeSidebar();
+        function initMobileDrawer() {
+            if (state.isMobile) {
+                elements.sidebar.classList.add('hidden');
+            } else {
+                elements.sidebar.classList.remove('hidden');
             }
         }
         
-        // 事件监听器设置
+        function toggleSidebar() {
+            if (state.isMobile) {
+                if (elements.sidebar.classList.contains('hidden')) {
+                    elements.sidebar.classList.remove('hidden');
+                    elements.sidebarOverlay.classList.add('active');
+                } else {
+                    closeSidebar();
+                }
+            }
+        }
+        
+        function closeSidebar() {
+            if (state.isMobile) {
+                elements.sidebar.classList.add('hidden');
+                elements.sidebarOverlay.classList.remove('active');
+            }
+        }
+        
+        function handleResize() {
+            const wasMobile = state.isMobile;
+            state.isMobile = window.innerWidth <= 1024;
+            
+            if (state.isMobile !== wasMobile) {
+                if (!state.isMobile) {
+                    elements.sidebar.classList.remove('hidden');
+                    elements.sidebarOverlay.classList.remove('active');
+                } else {
+                    elements.sidebar.classList.add('hidden');
+                }
+            }
+        }
+        
+        function setupTabs() {
+            elements.treeviewTab.addEventListener('click', () => {
+                elements.treeviewTab.classList.add('tab-active');
+                elements.conversationsTab.classList.remove('tab-active');
+                elements.treeviewContent.classList.remove('hidden');
+                elements.conversationsContent.classList.add('hidden');
+            });
+            
+            elements.conversationsTab.addEventListener('click', () => {
+                elements.conversationsTab.classList.add('tab-active');
+                elements.treeviewTab.classList.remove('tab-active');
+                elements.conversationsContent.classList.remove('hidden');
+                elements.treeviewContent.classList.add('hidden');
+            });
+        }
+        
         function setupEventListeners() {
             elements.deleteNodeBtn.addEventListener('click', deleteNode);
             elements.clearConversationBtn.addEventListener('click', clearConversation);
@@ -822,11 +992,9 @@
             elements.themeToggle.addEventListener('click', toggleTheme);
             elements.newConversationBtn.addEventListener('click', createNewConversation);
             
-            // 节点事件委托
             elements.canvas.addEventListener('click', handleNodeClick);
         }
         
-        // 节点点击事件处理
         function handleNodeClick(e) {
             const nodeElement = e.target.closest('.node');
             if (!nodeElement) return;
@@ -857,7 +1025,6 @@
             }
         }
         
-        // 对话管理函数
         function createNewConversation() {
             const conversationId = 'conversation_' + Date.now();
             const now = new Date();
@@ -875,7 +1042,6 @@
             
             state.currentConversationId = conversationId;
             
-            // 创建初始系统节点
             const initialX = (5000 - CONSTANTS.NODE_WIDTH) / 2;
             createNode("system", i18n('systemPrompt'), initialX, 200, true);
             
@@ -915,7 +1081,6 @@
             
             delete state.conversations[conversationId];
             
-            // 如果删除的是当前对话，切换到另一个对话
             if (state.currentConversationId === conversationId) {
                 const remainingIds = Object.keys(state.conversations);
                 if (remainingIds.length > 0) {
@@ -939,6 +1104,9 @@
                 
                 const conversationItem = document.createElement('div');
                 conversationItem.className = `conversation-item ${conversationId === state.currentConversationId ? 'active' : ''}`;
+                if (conversationId === state.currentConversationId) {
+                    conversationItem.style.backgroundColor = 'oklch(var(--p) / 0.2)';
+                }
                 
                 const titleElement = document.createElement('div');
                 titleElement.className = 'conversation-title';
@@ -949,8 +1117,8 @@
                 actionsElement.className = 'conversation-actions';
                 
                 const renameBtn = document.createElement('button');
-                renameBtn.className = 'btn btn-outline-light btn-sm';
-                renameBtn.textContent = '✎';
+                renameBtn.className = 'btn btn-xs btn-ghost btn-sm p-1';
+                renameBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" /></svg>';
                 renameBtn.title = i18n('renameConversation');
                 renameBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -958,8 +1126,8 @@
                 });
                 
                 const deleteBtn = document.createElement('button');
-                deleteBtn.className = 'btn btn-outline-light btn-sm';
-                deleteBtn.textContent = '×';
+                deleteBtn.className = 'btn btn-xs btn-ghost text-error btn-sm p-1';
+                deleteBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>';
                 deleteBtn.title = i18n('deleteConversation');
                 deleteBtn.addEventListener('click', (e) => {
                     e.stopPropagation();
@@ -976,7 +1144,6 @@
             });
         }
         
-        // 节点管理函数
         function createNode(role, content, x, y, isStart = false, reasoning = null) {
             const conversation = getCurrentConversation();
             const timestamp = Date.now();
@@ -1049,7 +1216,6 @@
             alert(i18n('clearedAlert'));
         }
         
-        // 消息发送和API调用
         async function sendMessage() {
             const userInput = elements.userInput.value.trim();
             if (!userInput) {
@@ -1114,6 +1280,58 @@
                 elements.userInput.disabled = false;
                 elements.sendBtn.textContent = i18n('sendBtn');
                 saveStateToLocalStorage();
+            }
+        }
+        
+        async function testApiConnection() {
+            const apiUrl = document.getElementById('apiUrl').value.trim();
+            const apiKey = document.getElementById('apiKey').value.trim();
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
+            
+            if (!apiUrl || !apiKey) {
+                alert(i18n('setApi'));
+                return;
+            }
+            
+            const testBtn = document.getElementById('testApiBtn');
+            testBtn.disabled = true;
+            testBtn.textContent = i18n('testing');
+            
+            try {
+                const response = await fetch(apiUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: modelName,
+                        messages: [
+                            { role: 'system', content: i18n('systemPrompt') },
+                            { role: 'user', content: i18n('testMessage') }
+                        ],
+                        stream: false,
+                        temperature: temperature
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                if (data.choices?.[0]?.message?.content) {
+                    alert(i18n('apiSuccess'));
+                } else {
+                    alert(i18n('apiUnexpected'));
+                }
+            } catch (error) {
+                alert(i18n('apiFailed') + error.message);
+            } finally {
+                testBtn.disabled = false;
+                testBtn.textContent = i18n('testConnection');
             }
         }
         
@@ -1219,7 +1437,6 @@
                                 
                                 renderNodes();
                             } catch (e) {
-                                // Ignore parsing errors
                             }
                         }
                     }
@@ -1241,59 +1458,6 @@
             }
         }
         
-        async function testApiConnection() {
-            const apiUrl = document.getElementById('apiUrl').value.trim();
-            const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
-            const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
-            
-            if (!apiUrl || !apiKey) {
-                alert(i18n('setApi'));
-                return;
-            }
-            
-            const testBtn = document.getElementById('testApiBtn');
-            testBtn.disabled = true;
-            testBtn.textContent = i18n('testing');
-            
-            try {
-                const response = await fetch(apiUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
-                    },
-                    body: JSON.stringify({
-                        model: modelName,
-                        messages: [
-                            { role: 'system', content: i18n('systemPrompt') },
-                            { role: 'user', content: i18n('testMessage') }
-                        ],
-                        stream: false,
-                        temperature: temperature
-                    })
-                });
-                
-                if (!response.ok) {
-                    throw new Error(`API request failed: ${response.status} ${response.statusText}`);
-                }
-                
-                const data = await response.json();
-                
-                if (data.choices?.[0]?.message?.content) {
-                    alert(i18n('apiSuccess'));
-                } else {
-                    alert(i18n('apiUnexpected'));
-                }
-            } catch (error) {
-                alert(i18n('apiFailed') + error.message);
-            } finally {
-                testBtn.disabled = false;
-                testBtn.textContent = i18n('testConnection');
-            }
-        }
-        
-        // 渲染函数
         function renderAll() {
             renderNodes();
             renderConnections();
@@ -1310,14 +1474,12 @@
             const existingNodeIds = new Set(Array.from(existingNodes).map(node => node.id));
             const currentNodeIds = new Set(Object.keys(conversation.nodes));
             
-            // 删除不存在的节点
             existingNodes.forEach(node => {
                 if (!currentNodeIds.has(node.id)) {
                     node.remove();
                 }
             });
             
-            // 创建或更新节点
             Object.values(conversation.nodes).forEach(node => {
                 let nodeElement = document.getElementById(node.id);
                 
@@ -1335,147 +1497,107 @@
         
         function createNodeElement(node) {
             const element = document.createElement('div');
-            element.className = `node ${node.role}`;
+            element.className = `card bg-base-200 shadow-xl node ${node.role}`;
             element.id = node.id;
             element.style.left = node.position.x + 'px';
             element.style.top = node.position.y + 'px';
             
-            const roleIndicator = document.createElement('div');
-            roleIndicator.className = `role-indicator role-${node.role}`;
-            roleIndicator.textContent = i18n(node.role);
+            const roleColors = {
+                system: 'badge-success',
+                user: 'badge-primary',
+                assistant: 'badge-secondary'
+            };
             
-            // 为用户节点添加重发按钮
+            let buttonsHTML = '';
             if (node.role === 'user') {
-                const resendBtn = document.createElement('button');
-                resendBtn.className = 'resend-btn mt-1';
-                resendBtn.textContent = '↻';
-                resendBtn.title = i18n('resendTooltip');
-                resendBtn.dataset.nodeId = node.id;
-                element.appendChild(resendBtn);
+                buttonsHTML += `<button class="node-btn resend-btn" data-node-id="${node.id}" title="${i18n('resendTooltip')}">↻</button>`;
             }
+            buttonsHTML += `<button class="node-btn copy-btn" data-node-id="${node.id}" title="${i18n('copyTooltip')}">⎘</button>`;
             
-            // 为所有节点添加复制按钮
-            const copyBtn = document.createElement('button');
-            copyBtn.className = 'copy-btn mt-1';
-            copyBtn.textContent = '⎘';
-            copyBtn.title = i18n('copyTooltip');
-            copyBtn.dataset.nodeId = node.id;
-            element.appendChild(copyBtn);
-            
-            const content = document.createElement('div');
-            content.className = 'node-content';
+            let contentHTML = '';
             
             if (node.reasoning !== undefined && node.reasoning !== null) {
-                const reasoningToggle = document.createElement('div');
-                reasoningToggle.className = 'reasoning-toggle';
-                reasoningToggle.textContent = i18n('reasoningProcess');
-                reasoningToggle.dataset.nodeId = node.id;
-                
-                const reasoningContent = document.createElement('div');
-                reasoningContent.className = 'reasoning-content reasoning-collapsed';
-                reasoningContent.dataset.nodeId = node.id;
-                
-                if (node.reasoning.includes('typing-indicator')) {
-                    reasoningContent.innerHTML = node.reasoning;
-                } else {
-                    reasoningContent.textContent = node.reasoning;
-                }
-                
-                const finalAnswer = document.createElement('div');
-                finalAnswer.className = 'final-answer markdown-body';
-                finalAnswer.style.marginTop = '8px';
-                
-                // 只在流式输出完成后渲染Markdown
-                if (node.content.includes('typing-indicator')) {
-                    finalAnswer.innerHTML = node.content;
-                } else {
-                    finalAnswer.innerHTML = marked.parse(node.content);
-                }
-                
-                content.appendChild(reasoningToggle);
-                content.appendChild(reasoningContent);
-                content.appendChild(finalAnswer);
+                contentHTML += `
+                    <div class="reasoning-toggle" data-node-id="${node.id}">${i18n('reasoningProcess')}</div>
+                    <div class="reasoning-content reasoning-collapsed" data-node-id="${node.id}">${node.reasoning.includes('typing-indicator') ? node.reasoning : escapeHtml(node.reasoning)}</div>
+                    <div class="final-answer" style="margin-top: 8px;">${node.content.includes('typing-indicator') ? node.content : marked.parse(node.content)}</div>
+                `;
             } else {
-                // 只在流式输出完成后渲染Markdown
-                if (node.content.includes('typing-indicator')) {
-                    content.innerHTML = node.content;
-                } else {
-                    content.innerHTML = marked.parse(node.content);
-                }
+                contentHTML = node.content.includes('typing-indicator') ? node.content : marked.parse(node.content);
             }
             
-            element.appendChild(roleIndicator);
-            element.appendChild(content);
+            element.innerHTML = `
+                ${buttonsHTML}
+                <div class="card-body p-4" style="height: ${CONSTANTS.NODE_HEIGHT[node.role]}px;">
+                    <div class="badge ${roleColors[node.role]} mb-1" style="font-size: 10px; font-weight: bold;">${i18n(node.role)}</div>
+                    <div class="node-content">${contentHTML}</div>
+                </div>
+            `;
             
             return element;
         }
         
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+        
         function updateNodeElement(element, node) {
-            const content = element.querySelector('.node-content');
+            const cardBody = element.querySelector('.card-body');
+            if (!cardBody) return;
             
-            // 确保用户节点的重发按钮存在
-            if (node.role === 'user' && !element.querySelector('.resend-btn')) {
-                const resendBtn = document.createElement('button');
-                resendBtn.className = 'resend-btn';
-                resendBtn.textContent = '↻';
-                resendBtn.title = i18n('resendTooltip');
-                resendBtn.dataset.nodeId = node.id;
-                element.appendChild(resendBtn);
-            }
+            const content = cardBody.querySelector('.node-content');
+            const hasTyping = node.content.includes('typing-indicator');
+            const hasReasoning = node.reasoning !== undefined && node.reasoning !== null;
             
-            // 确保复制按钮存在
-            if (!element.querySelector('.copy-btn')) {
-                const copyBtn = document.createElement('button');
-                copyBtn.className = 'copy-btn';
-                copyBtn.textContent = '⎘';
-                copyBtn.title = i18n('copyTooltip');
-                copyBtn.dataset.nodeId = node.id;
-                element.appendChild(copyBtn);
-            }
-            
-            if (node.reasoning !== undefined && node.reasoning !== null) {
+            if (hasReasoning) {
                 let reasoningToggle = content.querySelector('.reasoning-toggle');
-                let reasoningContent = content.querySelector('.reasoning-content');
+                let reasoningContentDiv = content.querySelector('.reasoning-content');
                 let finalAnswer = content.querySelector('.final-answer');
                 
-                if (!reasoningToggle) {
-                    content.innerHTML = '';
+                if (!reasoningToggle || !reasoningContentDiv || !finalAnswer) {
+                    let buttonsHTML = '';
+                    if (node.role === 'user') {
+                        buttonsHTML += `<button class="node-btn resend-btn" data-node-id="${node.id}" title="${i18n('resendTooltip')}">↻</button>`;
+                    }
+                    buttonsHTML += `<button class="node-btn copy-btn" data-node-id="${node.id}" title="${i18n('copyTooltip')}">⎘</button>`;
                     
-                    reasoningToggle = document.createElement('div');
-                    reasoningToggle.className = 'reasoning-toggle';
+                    const roleColors = {
+                        system: 'badge-success',
+                        user: 'badge-primary',
+                        assistant: 'badge-secondary'
+                    };
+                    element.innerHTML = `
+                        ${buttonsHTML}
+                        <div class="card-body p-4" style="height: ${CONSTANTS.NODE_HEIGHT[node.role]}px;">
+                            <div class="badge ${roleColors[node.role]} mb-1" style="font-size: 10px; font-weight: bold;">${i18n(node.role)}</div>
+                            <div class="node-content">
+                                <div class="reasoning-toggle" data-node-id="${node.id}">${i18n('reasoningProcess')}</div>
+                                <div class="reasoning-content reasoning-collapsed" data-node-id="${node.id}"></div>
+                                <div class="final-answer" style="margin-top: 8px;"></div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                reasoningToggle = content.querySelector('.reasoning-toggle');
+                reasoningContentDiv = content.querySelector('.reasoning-content');
+                finalAnswer = content.querySelector('.final-answer');
+                
+                if (reasoningToggle) {
                     reasoningToggle.textContent = i18n('reasoningProcess');
-                    reasoningToggle.dataset.nodeId = node.id;
-                    
-                    reasoningContent = document.createElement('div');
-                    reasoningContent.className = 'reasoning-content reasoning-collapsed';
-                    reasoningContent.dataset.nodeId = node.id;
-                    
-                    finalAnswer = document.createElement('div');
-                    finalAnswer.className = 'final-answer markdown-body';
-                    finalAnswer.style.marginTop = '8px';
-                    
-                    content.appendChild(reasoningToggle);
-                    content.appendChild(reasoningContent);
-                    content.appendChild(finalAnswer);
                 }
                 
-                if (node.reasoning.includes('typing-indicator')) {
-                    reasoningContent.innerHTML = node.reasoning;
-                } else {
-                    reasoningContent.textContent = node.reasoning;
+                if (reasoningContentDiv) {
+                    reasoningContentDiv.innerHTML = node.reasoning.includes('typing-indicator') ? node.reasoning : escapeHtml(node.reasoning);
                 }
                 
-                if (node.content.includes('typing-indicator')) {
-                    finalAnswer.innerHTML = node.content;
-                } else {
-                    finalAnswer.innerHTML = marked.parse(node.content);
+                if (finalAnswer) {
+                    finalAnswer.innerHTML = hasTyping ? node.content : marked.parse(node.content);
                 }
             } else {
-                if (node.content.includes('typing-indicator')) {
-                    content.innerHTML = node.content;
-                } else {
-                    content.innerHTML = marked.parse(node.content);
-                }
+                content.innerHTML = hasTyping ? node.content : marked.parse(node.content);
             }
             
             element.style.left = node.position.x + 'px';
@@ -1510,7 +1632,10 @@
             const pathToSelected = getPathToNode(conversation.startNode, conversation.selectedNodeId);
             const inPath = pathToSelected.includes(fromNode.id) && pathToSelected.includes(toNode.id);
             
-            path.setAttribute('stroke', inPath ? 'var(--primary-color)' : '#6c757d');
+            const currentTheme = document.documentElement.getAttribute('data-theme');
+            const isdark = currentTheme === 'dark';
+            
+            path.setAttribute('stroke', inPath ? (isdark ? '#818cf8' : '#00baa6') : (isdark ? '#6b7280' : '#6c757d'));
             path.setAttribute('stroke-width', inPath ? '2' : '1');
             path.setAttribute('fill', 'none');
             path.setAttribute('stroke-dasharray', inPath ? 'none' : '5,5');
@@ -1537,15 +1662,14 @@
             const li = document.createElement('li');
             
             const treeNode = document.createElement('div');
-            treeNode.className = 'tree-node';
+            treeNode.className = 'tree-node flex items-center gap-1';
             if (node.branches.length > 0) {
                 treeNode.classList.add('has-children');
             }
             
-            // 添加折叠/展开按钮
             if (node.branches.length > 0) {
                 const toggle = document.createElement('span');
-                toggle.className = 'tree-toggle';
+                toggle.className = 'tree-toggle text-base-content/50';
                 toggle.innerHTML = conversation.treeCollapsedNodes.has(nodeId) ? '▶' : '▼';
                 toggle.dataset.nodeId = nodeId;
                 toggle.addEventListener('click', function(e) {
@@ -1556,7 +1680,8 @@
             }
 
             const roleBadge = document.createElement('span');
-            roleBadge.className = `badge ${node.role === 'system' ? 'bg-success' : node.role === 'user' ? 'bg-primary' : 'bg-info'} me-1`;
+            const roleColors = { system: 'badge-success', user: 'badge-primary', assistant: 'badge-secondary' };
+            roleBadge.className = `badge badge-xs ${roleColors[node.role]}`;
             roleBadge.textContent = node.role.substring(0, 1).toUpperCase();
             
             const content = document.createTextNode(
@@ -1593,7 +1718,6 @@
             return li;
         }
         
-        // 树节点折叠/展开功能
         function toggleTreeNode(nodeId) {
             const conversation = getCurrentConversation();
             if (conversation.treeCollapsedNodes.has(nodeId)) {
@@ -1604,7 +1728,6 @@
             renderTreeView();
         }
         
-        // 工具函数
         function calculateNodePosition(parentNode, nodeType) {
             const conversation = getCurrentConversation();
             const parentPos = parentNode.position;
@@ -1707,6 +1830,11 @@
             
             document.querySelectorAll('.tree-node').forEach(treeNode => {
                 treeNode.classList.toggle('selected', treeNode.dataset.nodeId === conversation.selectedNodeId);
+                if (treeNode.dataset.nodeId === conversation.selectedNodeId) {
+                    treeNode.style.backgroundColor = 'oklch(var(--p) / 0.2)';
+                } else {
+                    treeNode.style.backgroundColor = '';
+                }
             });
         }
         
@@ -1764,20 +1892,16 @@
             const node = conversation.nodes[nodeId];
             if (!node) return;
             
-            // 简化复制逻辑 - 直接复制内容
             let textToCopy = node.content;
             
-            // 如果节点内容包含Markdown，我们需要获取纯文本
             const tempElement = document.createElement('div');
             tempElement.innerHTML = node.content;
             textToCopy = tempElement.textContent || tempElement.innerText || '';
             
-            // 使用Clipboard API复制文本
             navigator.clipboard.writeText(textToCopy).then(() => {
                 showCopySuccess(nodeId);
             }).catch(err => {
                 console.error('Copy failed:', err);
-                // 备用方法
                 const textArea = document.createElement('textarea');
                 textArea.value = textToCopy;
                 document.body.appendChild(textArea);
@@ -1795,7 +1919,7 @@
             let successElement = nodeElement.querySelector('.copy-success');
             if (!successElement) {
                 successElement = document.createElement('div');
-                successElement.className = 'copy-success mt-1';
+                successElement.className = 'copy-success';
                 successElement.textContent = i18n('copySuccess');
                 nodeElement.appendChild(successElement);
             }
@@ -1815,8 +1939,7 @@
                     e.target.classList.contains('reasoning-content') ||
                     e.target.classList.contains('final-answer') ||
                     e.target.classList.contains('reasoning-toggle') ||
-                    e.target.classList.contains('resend-btn') ||
-                    e.target.classList.contains('copy-btn')) return;
+                    e.target.classList.contains('node-btn')) return;
                 
                 state.isDragging = true;
                 state.dragStart.x = e.clientX;
@@ -1886,16 +2009,14 @@
             renderConnections();
         }
         
-        // 数据持久化
         function saveStateToLocalStorage() {
             try {
-                // 创建一个深拷贝，将 Set 转换为数组以便序列化
                 const conversationsToSave = {};
                 Object.keys(state.conversations).forEach(conversationId => {
                     const conversation = state.conversations[conversationId];
                     conversationsToSave[conversationId] = {
                         ...conversation,
-                        treeCollapsedNodes: Array.from(conversation.treeCollapsedNodes) // 转换为数组
+                        treeCollapsedNodes: Array.from(conversation.treeCollapsedNodes)
                     };
                 });
                 
@@ -1908,7 +2029,7 @@
                         modelName: document.getElementById('modelName').value,
                         temperature: document.getElementById('temperature').value
                     },
-                    version: "2.0" // 标记为新版本
+                    version: "2.0-daisyui"
                 };
                 
                 localStorage.setItem('vibechat-state', JSON.stringify(stateToSave));
@@ -1923,21 +2044,16 @@
                 if (savedState) {
                     const parsedState = JSON.parse(savedState);
                     
-                    // 处理旧版本数据兼容性
-                    if (parsedState.version === "2.0") {
-                        // 新版本数据格式
+                    if (parsedState.version === "2.0-daisyui" || parsedState.version === "2.0") {
                         if (parsedState.conversations) {
                             state.conversations = parsedState.conversations;
                             
-                            // 确保 treeCollapsedNodes 是 Set 对象
                             Object.keys(state.conversations).forEach(conversationId => {
                                 const conversation = state.conversations[conversationId];
                                 if (conversation.treeCollapsedNodes && !(conversation.treeCollapsedNodes instanceof Set)) {
-                                    // 如果它是数组，转换为 Set
                                     if (Array.isArray(conversation.treeCollapsedNodes)) {
                                         conversation.treeCollapsedNodes = new Set(conversation.treeCollapsedNodes);
                                     } else {
-                                        // 否则创建新的空 Set
                                         conversation.treeCollapsedNodes = new Set();
                                     }
                                 } else if (!conversation.treeCollapsedNodes) {
@@ -1954,7 +2070,6 @@
                             state.currentConversationId = parsedState.currentConversationId;
                         }
                     } else {
-                        // 旧版本数据格式 - 转换为新格式
                         console.log("检测到旧版本数据，正在转换...");
                         convertOldState(parsedState);
                     }
@@ -1971,7 +2086,6 @@
             }
         }
         
-        // 转换旧版本数据到新格式
         function convertOldState(oldState) {
             const conversationId = 'conversation_' + Date.now();
             const now = new Date();
@@ -1989,7 +2103,6 @@
             
             const conversation = state.conversations[conversationId];
             
-            // 转换对话数据
             if (oldState.conversation) {
                 conversation.nodes = oldState.conversation.nodes || {};
                 conversation.startNode = oldState.conversation.startNode || null;
@@ -1999,7 +2112,6 @@
                     conversation.zoomLevel = oldState.zoomLevel;
                 }
                 
-                // 处理旧的 treeCollapsedNodes
                 if (oldState.treeCollapsedNodes) {
                     if (oldState.treeCollapsedNodes instanceof Set) {
                         conversation.treeCollapsedNodes = oldState.treeCollapsedNodes;
@@ -2013,7 +2125,6 @@
             
             state.currentConversationId = conversationId;
             
-            // 保存转换后的状态
             saveStateToLocalStorage();
         }
         
@@ -2023,7 +2134,7 @@
             const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}${now.getSeconds().toString().padStart(2, '0')}`;
             
             const exportData = {
-                version: "2.0",
+                version: "2.0-daisyui",
                 exportTime: now.toISOString(),
                 title: conversation.title,
                 nodes: {},
@@ -2065,7 +2176,6 @@
                 try {
                     const importedData = JSON.parse(e.target.result);
                     
-                    // 检查数据格式
                     if (!importedData.nodes || !importedData.startNode) {
                         alert(i18n('invalidFormat'));
                         return;
@@ -2093,7 +2203,6 @@
                             nextNodeId: branch.nextNodeId
                         }));
                         
-                        // 处理位置信息：如果旧数据没有位置信息，使用默认值
                         const position = node.position || { x: 0, y: 0 };
                         
                         conversation.nodes[node.id] = {
@@ -2106,7 +2215,6 @@
                         };
                     });
                     
-                    // 检查是否需要重新排列节点（旧版本数据可能没有位置信息）
                     const needsAutoArrange = Object.values(conversation.nodes).some(node => 
                         node.position.x === 0 && node.position.y === 0
                     );
