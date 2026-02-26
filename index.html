@@ -1529,7 +1529,7 @@
             element.innerHTML = `
                 ${buttonsHTML}
                 <div class="card-body p-4" style="height: ${CONSTANTS.NODE_HEIGHT[node.role]}px;">
-                    <div class="badge ${roleColors[node.role]} mb-1" style="font-size: 10px; font-weight: bold;">${i18n(node.role)}</div>
+                    <div class="badge text-white ${roleColors[node.role]} mb-1" style="font-size: 10px; font-weight: bold;">${i18n(node.role)}</div>
                     <div class="node-content">${contentHTML}</div>
                 </div>
             `;
@@ -1571,7 +1571,7 @@
                     element.innerHTML = `
                         ${buttonsHTML}
                         <div class="card-body p-4" style="height: ${CONSTANTS.NODE_HEIGHT[node.role]}px;">
-                            <div class="badge ${roleColors[node.role]} mb-1" style="font-size: 10px; font-weight: bold;">${i18n(node.role)}</div>
+                            <div class="badge text-white ${roleColors[node.role]} mb-1" style="font-size: 10px; font-weight: bold;">${i18n(node.role)}</div>
                             <div class="node-content">
                                 <div class="reasoning-toggle" data-node-id="${node.id}">${i18n('reasoningProcess')}</div>
                                 <div class="reasoning-content reasoning-collapsed" data-node-id="${node.id}"></div>
@@ -1681,7 +1681,7 @@
 
             const roleBadge = document.createElement('span');
             const roleColors = { system: 'badge-success', user: 'badge-primary', assistant: 'badge-secondary' };
-            roleBadge.className = `badge badge-xs ${roleColors[node.role]}`;
+            roleBadge.className = `badge text-white badge-xs ${roleColors[node.role]}`;
             roleBadge.textContent = node.role.substring(0, 1).toUpperCase();
             
             const content = document.createTextNode(
