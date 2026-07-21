@@ -416,10 +416,10 @@
                             <label class="label py-1">
                                 <span class="label-text text-sm" data-i18n="modelName">模型名称</span>
                             </label>
-                            <input type="text" class="input input-sm input-bordered" id="modelName" list="modelOptions" value="deepseek-chat" placeholder="输入模型名称" data-i18n-placeholder="modelNamePlaceholder" autocomplete="off">
+                            <input type="text" class="input input-sm input-bordered" id="modelName" list="modelOptions" value="deepseek-v4-flash" placeholder="输入模型名称" data-i18n-placeholder="modelNamePlaceholder" autocomplete="off">
                             <datalist id="modelOptions">
-                                <option value="deepseek-chat">
-                                <option value="deepseek-reasoner">
+                                <option value="deepseek-v4-flash">
+                                <option value="deepseek-v4-pro">
                             </datalist>
                         </div>
                         <div class="form-control mt-2">
@@ -1231,7 +1231,7 @@
             
             const apiUrl = document.getElementById('apiUrl').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-v4-flash";
             const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             
             if (!apiUrl || !apiKey) {
@@ -1286,7 +1286,7 @@
         async function testApiConnection() {
             const apiUrl = document.getElementById('apiUrl').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-v4-flash";
             const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             
             if (!apiUrl || !apiKey) {
@@ -1345,7 +1345,7 @@
             
             const apiUrl = document.getElementById('apiUrl').value.trim();
             const apiKey = document.getElementById('apiKey').value.trim();
-            const modelName = document.getElementById('modelName').value.trim() || "deepseek-chat";
+            const modelName = document.getElementById('modelName').value.trim() || "deepseek-v4-flash";
             const temperature = parseFloat(document.getElementById('temperature').value) || 1.0;
             
             if (!apiUrl || !apiKey) {
@@ -2077,7 +2077,7 @@
                     if (parsedState.apiSettings) {
                         document.getElementById('apiUrl').value = parsedState.apiSettings.apiUrl || 'https://api.deepseek.com/chat/completions';
                         document.getElementById('apiKey').value = parsedState.apiSettings.apiKey || '';
-                        document.getElementById('modelName').value = parsedState.apiSettings.modelName || 'deepseek-chat';
+                        document.getElementById('modelName').value = parsedState.apiSettings.modelName || 'deepseek-v4-flash';
                         document.getElementById('temperature').value = parsedState.apiSettings.temperature || '1.0';
                     }
                 }
